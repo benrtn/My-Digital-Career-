@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ────────────────────────────────────────
+   Base
+──────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-cream-50 text-neutral-900;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  }
+
+  ::selection {
+    @apply bg-neutral-950/10;
+  }
+
+  /* Hide scrollbar in chrome/safari while keeping functionality */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-400;
+  }
+}
+
+/* ────────────────────────────────────────
+   Components
+──────────────────────────────────────── */
+@layer components {
+  .glass {
+    @apply bg-white/60 backdrop-blur-2xl border border-white/70;
+  }
+
+  .glass-dark {
+    @apply bg-neutral-950/80 backdrop-blur-2xl border border-white/10;
+  }
+
+  .section-padding {
+    @apply py-24 md:py-32 lg:py-40;
+  }
+
+  .container-lg {
+    @apply max-w-7xl mx-auto px-6;
+  }
+
+  .heading-display {
+    @apply font-light tracking-[-0.03em] leading-[1.05];
+  }
+}
+
+/* ────────────────────────────────────────
+   Animations
+──────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s linear infinite;
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.5) 50%, transparent 75%);
+  background-size: 200% 100%;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+/* ────────────────────────────────────────
+   Mobile optimizations
+──────────────────────────────────────── */
+
+/* Ensure minimum tap target size (44x44px) */
+@media (max-width: 767px) {
+  button,
+  a,
+  [role="button"],
+  input[type="checkbox"],
+  select {
+    min-height: 44px;
+  }
+
+  /* Better spacing for mobile sections */
+  .section-padding {
+    @apply py-16;
+  }
+
+  /* Prevent text from being too small on mobile */
+  .container-lg {
+    @apply px-4;
+  }
+
+  /* Improve form inputs on mobile */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Smooth momentum scrolling for iOS */
+.overflow-y-auto,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
