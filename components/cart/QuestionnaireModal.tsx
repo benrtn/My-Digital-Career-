@@ -1,6 +1,4 @@
 'use client'
-
-import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -199,10 +197,7 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
   }
 
   function addSocial() {
-    setData((prev) => {
-      const sharedName = prev.socialLinks[0]?.name || ''
-      return { ...prev, socialLinks: [...prev.socialLinks, { name: sharedName, url: '' }] }
-    })
+    setData((prev) => ({ ...prev, socialLinks: [...prev.socialLinks, emptySocial()] }))
   }
 
   function removeSocial(index: number) {
@@ -216,19 +211,19 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
   function updateSocial(index: number, patch: Partial<SocialLink>) {
     setData((prev) => {
       const next = [...prev.socialLinks]
-      if (index === 0 && Object.prototype.hasOwnProperty.call(patch, 'name')) {
-        const sharedName = patch.name ?? ''
-        return {
-          ...prev,
-          socialLinks: next.map((link) => ({
-            ...link,
-            name: sharedName,
-          })),
-        }
-      }
       next[index] = { ...next[index], ...patch }
       return { ...prev, socialLinks: next }
     })
+  }
+
+  function setSocialSelection(index: number, value: string) {
+    updateSocial(index, {
+      name: value === 'other' ? OTHER_SOCIAL_PREFIX : value,
+    })
+  }
+
+  function setCustomSocialLabel(index: number, value: string) {
+    updateSocial(index, { name: `${OTHER_SOCIAL_PREFIX}${value}` })
   }
 
   useEffect(() => {
@@ -316,6 +311,19 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
     }
 
     if (currentStep === 3) {
+      const hasIncompleteSocial = data.socialLinks.some((link) => {
+        const hasUrl = link.url.trim().length > 0
+        const selection = getSocialSelection(link.name)
+        const hasName =
+          selection === 'other' ? getCustomSocialLabel(link.name).trim().length > 0 : selection.length > 0
+
+        return hasUrl && !hasName
+      })
+
+      if (hasIncompleteSocial) {
+        nextErrors.socialLinks = 'Sélectionnez un réseau pour chaque lien renseigné.'
+      }
+
       if (!data.cvLink.trim()) nextErrors.cvLink = tq.required
       if (!data.photoLink.trim()) nextErrors.photoLink = tq.required
     }
@@ -695,78 +703,84 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
                     subtitle="Choisissez les profils à intégrer, avec une sélection plus rapide et plus visuelle."
                     icon={<Briefcase size={18} />}
                   >
-                    <Field label={tq.fields.socials} hint="Ajoutez un ou plusieurs liens. Si vous choisissez “Autre”, précisez le nom du réseau." >
+                    <Field
+                      label={tq.fields.socials}
+                      hint="Chaque ligne garde maintenant son propre réseau et son propre lien."
+                      error={errors.socialLinks}
+                    >
                       <div className="space-y-4">
-                        <div className="grid gap-3 md:grid-cols-3">
-                          {SOCIAL_OPTIONS.map((option) => {
-                            const selected = getSocialSelection(data.socialLinks[0]?.name) === option.id
-                            return (
-                              <button
-                                key={option.id}
-                                type="button"
-                                onClick={() => updateSocial(0, { name: option.id === 'other' ? `${OTHER_SOCIAL_PREFIX}` : option.id })}
-                                className={cn(
-                                  'flex items-center gap-3 rounded-2xl border px-3 py-3 text-left transition',
-                                  selected
-                                    ? 'border-neutral-950 bg-neutral-950 text-white'
-                                    : 'border-neutral-200 hover:border-neutral-300'
-                                )}
-                              >
-                                {option.icon ? (
-                                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/90">
-                                    <Image src={option.icon} alt={option.label} width={20} height={20} />
-                                  </span>
-                                ) : (
-                                  <span className={cn(
-                                    'flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold',
-                                    selected ? 'bg-white/15 text-white' : 'bg-neutral-100 text-neutral-700'
-                                  )}>
-                                    ?
-                                  </span>
-                                )}
-                                <span className="text-sm font-medium">{option.label}</span>
-                              </button>
-                            )
-                          })}
-                        </div>
-
-                        {getSocialSelection(data.socialLinks[0]?.name) === 'other' ? (
-                          <input
-                            className={inputClass()}
-                            placeholder="Nom du réseau"
-                            value={getCustomSocialLabel(data.socialLinks[0]?.name)}
-                            onChange={(event) => updateSocial(0, { name: `${OTHER_SOCIAL_PREFIX}${event.target.value}` })}
-                          />
-                        ) : null}
-
                         {data.socialLinks.map((link, index) => (
                           <div key={index} className="rounded-[1.5rem] border border-neutral-200 bg-white p-4">
-                            <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_48px]">
-                              <div className="flex items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-medium text-neutral-600">
-                                {getSocialSelection(link.name) === 'other'
-                                  ? getCustomSocialLabel(link.name) || 'Autre'
-                                  : SOCIAL_OPTIONS.find((option) => option.id === getSocialSelection(link.name))?.label || 'Sélectionnez un réseau'}
-                              </div>
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                              <p className="text-sm font-semibold text-neutral-900">
+                                Réseau {index + 1}
+                              </p>
+                              {data.socialLinks.length > 1 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => removeSocial(index)}
+                                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-neutral-400 transition hover:border-red-200 hover:text-red-500"
+                                  aria-label={`Supprimer le réseau ${index + 1}`}
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              ) : null}
+                            </div>
 
+                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                              {SOCIAL_OPTIONS.map((option) => {
+                                const selected = getSocialSelection(link.name) === option.id
+
+                                return (
+                                  <button
+                                    key={option.id}
+                                    type="button"
+                                    title={option.label}
+                                    aria-label={option.label}
+                                    onClick={() => setSocialSelection(index, option.id)}
+                                    className={cn(
+                                      'flex h-16 items-center justify-center rounded-[1.15rem] border transition',
+                                      selected
+                                        ? 'border-neutral-950 bg-neutral-950 text-white shadow-[0_16px_32px_-24px_rgba(15,23,42,0.55)]'
+                                        : 'border-neutral-200 bg-neutral-50 text-neutral-700 hover:border-neutral-300 hover:bg-white'
+                                    )}
+                                  >
+                                    {option.icon ? (
+                                      <SocialOptionIcon
+                                        src={option.icon}
+                                        alt={option.label}
+                                        selected={selected}
+                                      />
+                                    ) : (
+                                      <span className={cn(
+                                        'text-xs font-semibold uppercase tracking-[0.14em]',
+                                        selected ? 'text-white' : 'text-neutral-700'
+                                      )}>
+                                        Autre
+                                      </span>
+                                    )}
+                                  </button>
+                                )
+                              })}
+                            </div>
+
+                            <div className="mt-3 grid gap-3">
                               <input
                                 className={inputClass()}
                                 placeholder={tq.fields.socialUrl}
                                 value={link.url}
                                 onChange={(event) => updateSocial(index, { url: event.target.value })}
                               />
-
-                              {data.socialLinks.length > 1 ? (
-                                <button
-                                  type="button"
-                                  onClick={() => removeSocial(index)}
-                                  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-neutral-400 transition hover:border-red-200 hover:text-red-500"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              ) : (
-                                <div />
-                              )}
                             </div>
+
+                            {getSocialSelection(link.name) === 'other' ? (
+                              <input
+                                className={cn(inputClass(), 'mt-3')}
+                                placeholder="Nom du réseau"
+                                value={getCustomSocialLabel(link.name)}
+                                onChange={(event) => setCustomSocialLabel(index, event.target.value)}
+                              />
+                            ) : null}
                           </div>
                         ))}
 
@@ -996,6 +1010,45 @@ function ToggleChoice({
   )
 }
 
+function SocialOptionIcon({
+  src,
+  alt,
+  selected,
+}: {
+  src: string
+  alt: string
+  selected: boolean
+}) {
+  const [failed, setFailed] = useState(false)
+
+  if (failed) {
+    return (
+      <span
+        className={cn(
+          'text-xs font-semibold uppercase tracking-[0.14em]',
+          selected ? 'text-white' : 'text-neutral-700'
+        )}
+      >
+        {alt}
+      </span>
+    )
+  }
+
+  return (
+    <div className={cn(
+      'flex items-center justify-center rounded-xl transition-all',
+      selected ? 'bg-white p-1.5' : ''
+    )}>
+      <img
+        src={src}
+        alt={alt}
+        onError={() => setFailed(true)}
+        className="h-7 w-7 object-contain"
+      />
+    </div>
+  )
+}
+
 function UploadField({
   value,
   placeholder,
@@ -1040,11 +1093,12 @@ function Error({ msg }: { msg: string }) {
     </p>
   )
 }
-  function getSocialSelection(value: string) {
-    if (value.startsWith(OTHER_SOCIAL_PREFIX)) return 'other'
-    return value
-  }
 
-  function getCustomSocialLabel(value: string) {
-    return value.startsWith(OTHER_SOCIAL_PREFIX) ? value.replace(OTHER_SOCIAL_PREFIX, '') : ''
-  }
+function getSocialSelection(value: string) {
+  if (value.startsWith(OTHER_SOCIAL_PREFIX)) return 'other'
+  return value
+}
+
+function getCustomSocialLabel(value: string) {
+  return value.startsWith(OTHER_SOCIAL_PREFIX) ? value.replace(OTHER_SOCIAL_PREFIX, '') : ''
+}
