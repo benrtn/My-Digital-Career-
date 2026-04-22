@@ -78,10 +78,10 @@ export async function POST(request: Request) {
     const { email, password } = await request.json()
 
     const adminEmail = process.env.ADMIN_EMAIL || ''
-    const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH || ''
     const adminPassword = process.env.ADMIN_PASSWORD || ''
+    const adminSecretKey = process.env.ADMIN_SECRET_KEY || ''
 
-    if (!adminEmail || (!adminPasswordHash && !adminPassword)) {
+    if (!adminEmail || !adminPassword) {
       return NextResponse.json(
         { success: false, error: 'Admin credentials not configured' },
         { status: 500 }
@@ -101,15 +101,6 @@ export async function POST(request: Request) {
       })
     }
 
-    if (emailOk && passwordOk) {
-      resetFailures(ip)
-      const token = await createAdminToken(adminEmail)
-      const response = NextResponse.json({ success: true })
-      response.cookies.set(ADMIN_SESSION_COOKIE, token, adminSessionCookie)
-      return response
-    }
-
-    recordFailure(ip)
     return NextResponse.json(
       { success: false, error: 'Invalid credentials' },
       { status: 401 }
@@ -120,10 +111,4 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
-}
-
-export async function DELETE() {
-  const response = NextResponse.json({ success: true })
-  clearAdminSession(response)
-  return response
 }

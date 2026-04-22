@@ -33,6 +33,15 @@ export function LegalDock({
   const [draftPayments, setDraftPayments] = useState(preferences.payments)
 
   useEffect(() => {
+    if (hydrated && !hasMadeChoice) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [hydrated, hasMadeChoice])
+
+  useEffect(() => {
     setDraftAnalytics(preferences.analytics)
     setDraftPayments(preferences.payments)
   }, [preferences.analytics, preferences.payments, isPreferencesOpen])
@@ -129,20 +138,14 @@ export function LegalDock({
           className={cn(
             variant === 'floating'
               ? 'mx-auto flex w-full max-w-4xl flex-wrap items-center justify-center gap-2 rounded-[1.75rem] border border-white/10 bg-neutral-950/88 px-3 py-3 shadow-[0_24px_80px_-48px_rgba(0,0,0,0.75)] backdrop-blur-2xl'
-              : 'w-full rounded-[1.9rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[0_24px_80px_-48px_rgba(0,0,0,0.75)] backdrop-blur-2xl'
+              : 'w-full rounded-[1.9rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-5 py-3 shadow-[0_24px_80px_-48px_rgba(0,0,0,0.75)] backdrop-blur-2xl'
           )}
         >
           {variant === 'inline' ? (
-            <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-xl space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-200/75">
-                  Cadre légal
-                </p>
-                <p className="text-sm leading-relaxed text-neutral-300">
-                  Accédez rapidement aux CGV, aux mentions légales, à la politique de confidentialité et aux réglages cookies depuis le bas de page.
-                </p>
-              </div>
-
+            <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2">
+              <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-200/75">
+                Cadre légal
+              </p>
               <div className="flex flex-wrap gap-2">
                 <LegalButton variant={variant} icon={<SlidersHorizontal size={15} />} onClick={() => openModal('cookies')}>
                   Gestion des cookies
@@ -160,7 +163,7 @@ export function LegalDock({
             </div>
           ) : (
             <>
-              <LegalButton icon={<SlidersHorizontal size={15} />} onClick={() => openModal('cookies')}>
+              <LegalButton icon={<SlidersHorizontal size={15} />} onClick={() => openModal('cookies')} variant={variant}>
                 Gestion des cookies
               </LegalButton>
               <LegalButton icon={<FileText size={15} />} onClick={() => openModal('cgv')}>

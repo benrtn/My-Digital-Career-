@@ -1,13 +1,7 @@
-/**
- * GET  /api/appointments — list available slots
- * POST /api/appointments — book a slot, create a Calendar event, persist it, email the client
- */
-
 import { NextResponse } from 'next/server'
 import {
-  createCalendarEvent,
   getGoogleCalendarBusySlots,
-  isGoogleCalendarConfigured,
+  createCalendarEvent,
 } from '@/lib/googleCalendar'
 import { saveAppointmentToSheets } from '@/lib/googleSheets'
 import {
@@ -20,103 +14,14 @@ export const runtime = 'nodejs'
 
 const DAYS_AHEAD = 10
 const DURATION_MINUTES = 60
-const BUSINESS_HOURS = { start: 7, end: 22 }
+const BUSINESS_HOURS = { start: 7, end: 22 } // Europe/Paris wall-clock hours
 const TIMEZONE = 'Europe/Paris'
 
 // ---------------------------------------------------------------------------
 // Timezone helpers
 // ---------------------------------------------------------------------------
 
-  if (!error || typeof error !== 'object') {
-    return fallback
-  }
-
-  const details = error as {
-    code?: number | string
-    status?: number
-    message?: string
-    cause?: {
-      reason?: string
-      message?: string
-      errors?: Array<{ reason?: string }>
-      details?: Array<{ reason?: string }>
-    }
-  }
-
-  const numericStatus =
-    typeof details.status === 'number'
-      ? details.status
-      : typeof details.code === 'number'
-        ? details.code
-        : undefined
-
-  const rawMessage = `${details.message ?? ''} ${details.cause?.message ?? ''}`.toLowerCase()
-  const reason =
-    details.cause?.reason ||
-    details.cause?.errors?.find((item) => item.reason)?.reason ||
-    details.cause?.details?.find((item) => item.reason)?.reason ||
-    ''
-
-  if (
-    rawMessage.includes('calendar api has not been used') ||
-    rawMessage.includes('accessnotconfigured') ||
-    reason === 'SERVICE_DISABLED' ||
-    reason === 'accessNotConfigured'
-  ) {
-    return {
-      status: 503,
-      message:
-        'Google Calendar n’est pas encore activé sur le projet Google du service account. Activez l’API Google Calendar dans Google Cloud puis réessayez.',
-    }
-  }
-
-  if (
-    numericStatus === 404 ||
-    rawMessage.includes('not found') ||
-    rawMessage.includes('requested entity was not found')
-  ) {
-    return {
-      status: 503,
-      message:
-        'Le calendrier Google configuré est introuvable ou non partagé avec le compte de service.',
-    }
-  }
-
-  if (
-    numericStatus === 403 ||
-    rawMessage.includes('forbidden') ||
-    rawMessage.includes('insufficient permissions')
-  ) {
-    return {
-      status: 503,
-      message:
-        'Le compte de service Google n’a pas accès au calendrier configuré. Partagez le calendrier avec son adresse e-mail puis réessayez.',
-    }
-  }
-
-  if (
-    numericStatus === 401 ||
-    rawMessage.includes('invalid_grant') ||
-    rawMessage.includes('invalid jwt') ||
-    rawMessage.includes('jwt')
-  ) {
-    return {
-      status: 503,
-      message:
-        'Les identifiants Google du service account sont invalides ou expirés.',
-    }
-  }
-
-  return fallback
-}
-
-function getParisDate(date: Date): {
-  year: number
-  month: number
-  day: number
-  hour: number
-  minute: number
-} {
+function getParisDate(date: Date): { year: number; month: number; day: number; hour: number; minute: number } {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: TIMEZONE,
     year: 'numeric',
@@ -128,25 +33,19 @@ function getParisDate(date: Date): {
   }).formatToParts(date)
 
   return {
-    year: parseInt(parts.find((part) => part.type === 'year')!.value, 10),
-    month: parseInt(parts.find((part) => part.type === 'month')!.value, 10),
-    day: parseInt(parts.find((part) => part.type === 'day')!.value, 10),
-    hour: parseInt(parts.find((part) => part.type === 'hour')!.value, 10),
-    minute: parseInt(parts.find((part) => part.type === 'minute')!.value, 10),
+    year: parseInt(parts.find((p) => p.type === 'year')!.value),
+    month: parseInt(parts.find((p) => p.type === 'month')!.value),
+    day: parseInt(parts.find((p) => p.type === 'day')!.value),
+    hour: parseInt(parts.find((p) => p.type === 'hour')!.value),
+    minute: parseInt(parts.find((p) => p.type === 'minute')!.value),
   }
 }
 
-function parisTimeToUTC(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute = 0
-): Date {
+function parisTimeToUTC(year: number, month: number, day: number, hour: number, minute: number = 0): Date {
   const rough = new Date(Date.UTC(year, month - 1, day, hour, minute))
   const parisHour = getParisDate(rough).hour
   const diff = parisHour - hour
-  return new Date(rough.getTime() - diff * 60 * 60 * 1000)
+  return new Date(rough.getTime() - diff * 3600000)
 }
 
 function formatDateLabel(date: Date): string {
@@ -182,26 +81,15 @@ async function buildSlots(appointments: SheetAppointmentRecord[]) {
   const now = new Date()
   const minBookingTime = now.getTime() + 24 * 60 * 60 * 1000
 
-  const parisToday = getParisDate(now)
-  const windowStart = parisTimeToUTC(
-    parisToday.year,
-    parisToday.month,
-    parisToday.day + 1,
-    BUSINESS_HOURS.start
-  )
-
-  const windowEndParts = getParisDate(new Date(now.getTime() + DAYS_AHEAD * 86_400_000))
-  const windowEnd = parisTimeToUTC(
-    windowEndParts.year,
-    windowEndParts.month,
-    windowEndParts.day,
-    BUSINESS_HOURS.end
-  )
+  const parisTodayParts = getParisDate(now)
+  const windowStart = parisTimeToUTC(parisTodayParts.year, parisTodayParts.month, parisTodayParts.day + 1, BUSINESS_HOURS.start)
+  const windowEndParts = getParisDate(new Date(now.getTime() + DAYS_AHEAD * 86400000))
+  const windowEnd = parisTimeToUTC(windowEndParts.year, windowEndParts.month, windowEndParts.day, BUSINESS_HOURS.end)
 
   const googleBusyRaw = await getGoogleCalendarBusySlots(windowStart, windowEnd)
-  const googleBusy = googleBusyRaw.map((slot) => ({
-    start: new Date(slot.start),
-    end: new Date(slot.end),
+  const googleBusy = googleBusyRaw.map((b) => ({
+    start: new Date(b.start),
+    end: new Date(b.end),
   }))
 
   const slots: Array<{
@@ -214,21 +102,23 @@ async function buildSlots(appointments: SheetAppointmentRecord[]) {
     available: boolean
   }> = []
 
-  for (let dayOffset = 1; dayOffset <= DAYS_AHEAD; dayOffset += 1) {
-    const referenceDate = new Date(now.getTime() + dayOffset * 86_400_000)
-    const paris = getParisDate(referenceDate)
+  for (let dayOffset = 1; dayOffset <= DAYS_AHEAD; dayOffset++) {
+    const refDate = new Date(now.getTime() + dayOffset * 86400000)
+    const paris = getParisDate(refDate)
 
-    for (let hour = BUSINESS_HOURS.start; hour < BUSINESS_HOURS.end; hour += 1) {
+    for (let hour = BUSINESS_HOURS.start; hour < BUSINESS_HOURS.end; hour++) {
       const startDate = parisTimeToUTC(paris.year, paris.month, paris.day, hour)
       const endDate = new Date(startDate.getTime() + DURATION_MINUTES * 60 * 1000)
 
-      const tooSoon = startDate.getTime() < minBookingTime
-      const conflictsWithLocal = appointments.some((item) =>
+      const pastMinBooking = startDate.getTime() < minBookingTime
+      const conflictsWithAppointment = appointments.some((item) =>
         overlaps(startDate, endDate, new Date(item.startAt), new Date(item.endAt))
       )
       const conflictsWithGoogle = googleBusy.some((busy) =>
         overlaps(startDate, endDate, busy.start, busy.end)
       )
+
+      const available = !pastMinBooking && !conflictsWithAppointment && !conflictsWithGoogle
 
       slots.push({
         id: `${startDate.toISOString()}-${DURATION_MINUTES}`,
@@ -237,7 +127,7 @@ async function buildSlots(appointments: SheetAppointmentRecord[]) {
         dateLabel: formatDateLabel(startDate),
         timeLabel: `${formatTimeLabel(startDate)} - ${formatTimeLabel(endDate)}`,
         durationMinutes: DURATION_MINUTES,
-        available: !tooSoon && !conflictsWithLocal && !conflictsWithGoogle,
+        available,
       })
     }
   }
@@ -245,19 +135,12 @@ async function buildSlots(appointments: SheetAppointmentRecord[]) {
   return slots
 }
 
+// ---------------------------------------------------------------------------
+// Route handlers
+// ---------------------------------------------------------------------------
+
 export async function GET(request: Request) {
   try {
-    if (!isGoogleCalendarConfigured()) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Google Calendar non configuré. Vérifiez GOOGLE_SERVICE_ACCOUNT_JSON et GOOGLE_CALENDAR_ID.',
-          slots: [],
-        },
-        { status: 503 }
-      )
-    }
-
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')?.trim().toLowerCase()
     const appointments = await readAppointmentsFromSheets()
@@ -273,46 +156,22 @@ export async function GET(request: Request) {
       })
     }
 
-    const slots = await buildSlots(appointments)
-
     return NextResponse.json({
       success: true,
-      timezone: TIMEZONE,
-      appointments: adminSession ? appointments : undefined,
-      slots,
+      appointments,
+      slots: await buildSlots(appointments),
     })
   } catch (error) {
     console.error('[appointments] GET failed:', error)
-    const calendarError = extractCalendarError(error)
     return NextResponse.json(
-      { success: false, error: calendarError.message, slots: [] },
-      { status: calendarError.status }
+      { success: false, error: 'Appointment lookup failed' },
+      { status: 500 }
     )
   }
 }
 
 export async function POST(request: Request) {
   try {
-    if (!isGoogleCalendarConfigured()) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Google Calendar non configuré. Vérifiez GOOGLE_SERVICE_ACCOUNT_JSON et GOOGLE_CALENDAR_ID.',
-        },
-        { status: 503 }
-      )
-    }
-
-    if (!isGoogleSheetsConfigured() && !isAppsScriptConfigured()) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Aucune persistance Google configurée pour les rendez-vous. Vérifiez GOOGLE_SPREADSHEET_ID ou GOOGLE_APPS_SCRIPT_URL.',
-        },
-        { status: 503 }
-      )
-    }
-
     const body = (await request.json()) as {
       email?: string
       firstName?: string
@@ -362,7 +221,7 @@ export async function POST(request: Request) {
       overlaps(startDate, endDate, new Date(busy.start), new Date(busy.end))
     )
 
-    if (conflictsWithLocal || conflictsWithGoogle) {
+    if (conflictsWithAppointment || conflictsWithGoogle) {
       return NextResponse.json(
         { success: false, error: 'Slot already booked' },
         { status: 409 }
@@ -376,11 +235,8 @@ export async function POST(request: Request) {
         `Client : ${clientName}`,
         `Email : ${email}`,
         `Durée : ${DURATION_MINUTES} min`,
-        orderId ? `Commande : ${orderId}` : '',
-        'Réservé via mydigitalcareer.com',
-      ]
-        .filter(Boolean)
-        .join('\n'),
+        `Réservé via mydigitalcareer.com`,
+      ].join('\n'),
       startUtc: startDate.toISOString(),
       endUtc: endDate.toISOString(),
       attendeeEmail: email,
@@ -396,8 +252,7 @@ export async function POST(request: Request) {
       durationMinutes: DURATION_MINUTES,
       mode: 'google_meet',
       meetLink: calendarResult.meetLink ?? undefined,
-      eventId: calendarResult.eventId,
-      orderId: orderId || undefined,
+      eventId: calendarResult.eventId ?? undefined,
       createdAt: new Date().toISOString(),
       orderId,
     }
@@ -411,9 +266,10 @@ export async function POST(request: Request) {
       email,
       firstName,
       lastName,
-      email,
-      dateLabel,
-      timeLabel,
+      startAt: record.startAt,
+      endAt: record.endAt,
+      durationMinutes: DURATION_MINUTES,
+      mode: 'google_meet',
       meetLink: calendarResult.meetLink ?? undefined,
       eventId: calendarResult.eventId ?? undefined,
       orderId,
@@ -426,14 +282,12 @@ export async function POST(request: Request) {
       success: true,
       appointment: record,
       meetLink: calendarResult.meetLink,
-      warnings,
     })
   } catch (error) {
     console.error('[appointments] POST failed:', error)
-    const calendarError = extractCalendarError(error)
     return NextResponse.json(
-      { success: false, error: calendarError.message },
-      { status: calendarError.status }
+      { success: false, error: 'Appointment booking failed' },
+      { status: 500 }
     )
   }
 }

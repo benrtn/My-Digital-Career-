@@ -115,7 +115,7 @@ export const fr = {
     items: [
       {
         title: 'Livraison rapide',
-        description: 'Votre E-CV est prêt sous 24 heures après réception de vos informations.',
+        description: 'Votre première version E-CV est prête sous 24 heures après envoie de vos informations.',
       },
       {
         title: 'Image premium',

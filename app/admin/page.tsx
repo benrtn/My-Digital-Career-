@@ -11,9 +11,15 @@ import {
   FileText, Zap, Activity, Video, Download,
   ClipboardList, Briefcase, Palette, LinkIcon,
 } from 'lucide-react'
+import {
+  getAdminConversations, getAdminOrders, getAdminClients,
+  getAdminQuestionnaires,
+  sendChatMessage, updateOrderStatus, sendFirstVersionEmail,
+} from '@/lib/googleSheets'
 import type { ChatConversation } from '@/types'
 import { cn } from '@/lib/utils'
 
+const ADMIN_SESSION_KEY = 'eworklife-admin-session'
 const POLL_INTERVAL = 15_000
 
 type AdminTab = 'dashboard' | 'orders' | 'clients' | 'questionnaires' | 'appointments' | 'messages'
@@ -99,6 +105,7 @@ export default function AdminPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [adminKey, setAdminKey] = useState('')
   const [tab, setTab] = useState<AdminTab>('dashboard')
 
   // Data
@@ -121,55 +128,41 @@ export default function AdminPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-
-    const restoreSession = async () => {
-      try {
-        const response = await fetch('/api/admin-auth', { cache: 'no-store' })
-        const data = await response.json() as { authenticated?: boolean }
-        if (!cancelled) {
-          setAuthenticated(Boolean(data.authenticated))
-        }
-      } catch {
-        if (!cancelled) {
-          setAuthenticated(false)
-        }
-      }
-    }
-
-    void restoreSession()
-    return () => {
-      cancelled = true
+    const saved = window.sessionStorage.getItem(ADMIN_SESSION_KEY)
+    if (saved) {
+      setAdminKey(saved)
+      setAuthenticated(true)
     }
   }, [])
 
   const loadData = useCallback(async () => {
     if (!authenticated) return
+    const key = adminKey
     try {
-      const response = await fetch('/api/admin/dashboard', { cache: 'no-store' })
-      const result = await response.json() as {
-        success?: boolean
-        conversations?: ChatConversation[]
-        orders?: AdminOrder[]
-        clients?: AdminClient[]
-        questionnaires?: AdminQuestionnaire[]
-        appointments?: AppointmentRecord[]
+      const [convResult, orderResult, clientResult, questionnaireResult, apptResult] = await Promise.all([
+        getAdminConversations(key),
+        getAdminOrders(key),
+        getAdminClients(key),
+        getAdminQuestionnaires(key),
+        fetch('/api/appointments').then(r => r.json()).catch(() => ({ success: false })),
+      ])
+      if (convResult.success && convResult.data?.conversations) {
+        setConversations(convResult.data.conversations as ChatConversation[])
       }
-
-      if (response.status === 401) {
-        setAuthenticated(false)
-        return
+      if (orderResult.success && orderResult.data?.orders) {
+        setOrders(orderResult.data.orders as AdminOrder[])
       }
-
-      if (!response.ok || !result.success) return
-
-      setConversations(result.conversations ?? [])
-      setOrders(result.orders ?? [])
-      setClients(result.clients ?? [])
-      setQuestionnaires(result.questionnaires ?? [])
-      setAppointments(result.appointments ?? [])
+      if (clientResult.success && clientResult.data?.clients) {
+        setClients(clientResult.data.clients as AdminClient[])
+      }
+      if (questionnaireResult.success && questionnaireResult.data?.questionnaires) {
+        setQuestionnaires(questionnaireResult.data.questionnaires as AdminQuestionnaire[])
+      }
+      if (apptResult.success && apptResult.appointments) {
+        setAppointments(apptResult.appointments as AppointmentRecord[])
+      }
     } catch { /* silent */ }
-  }, [authenticated])
+  }, [authenticated, adminKey])
 
   useEffect(() => {
     if (authenticated) {
@@ -249,8 +242,10 @@ export default function AdminPage() {
         body: JSON.stringify({ email: email.trim(), password }),
       })
       const data = await res.json()
-      if (data.success) {
+      if (data.success && data.secretKey) {
+        setAdminKey(data.secretKey)
         setAuthenticated(true)
+        window.sessionStorage.setItem(ADMIN_SESSION_KEY, data.secretKey)
       } else {
         setError('Identifiants incorrects.')
       }
@@ -260,18 +255,17 @@ export default function AdminPage() {
   }
 
   function handleLogout() {
-    void fetch('/api/admin-auth', { method: 'DELETE' })
     setAuthenticated(false)
+    setAdminKey('')
     setEmail('')
     setPassword('')
-    setError('')
     setConversations([])
     setOrders([])
     setClients([])
     setQuestionnaires([])
     setAppointments([])
-    setFolderStatuses({})
     setSelected(null)
+    window.sessionStorage.removeItem(ADMIN_SESSION_KEY)
   }
 
   async function handleSendReply() {
@@ -282,14 +276,12 @@ export default function AdminPage() {
     const msg = reply.trim()
     setReply('')
     try {
-      await fetch('/api/admin/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientEmail: selected,
-          clientName: conv.clientName,
-          message: msg,
-        }),
+      await sendChatMessage({
+        clientEmail: selected,
+        clientName: conv.clientName,
+        author: 'admin',
+        message: msg,
+        adminKey: adminKey,
       })
       await loadData()
     } catch {
@@ -302,14 +294,11 @@ export default function AdminPage() {
   async function handleSendFirstVersion(order: AdminOrder) {
     if (!confirm(`Envoyer l'email de première version à ${order.email} ?`)) return
     try {
-      await fetch('/api/admin/first-version', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientEmail: order.email,
-          clientName: order.name || `${order.firstName} ${order.lastName}`,
-          siteUrl: order.siteUrl,
-        }),
+      await sendFirstVersionEmail({
+        adminKey: adminKey,
+        clientEmail: order.email,
+        clientName: order.name || `${order.firstName} ${order.lastName}`,
+        siteUrl: order.siteUrl,
       })
       await loadData()
       alert('Email envoyé avec succès.')
@@ -320,22 +309,14 @@ export default function AdminPage() {
 
   async function handleStatusChange(orderId: string, newStatus: string) {
     try {
-      await fetch('/api/admin/order-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, status: newStatus }),
-      })
+      await updateOrderStatus({ adminKey: adminKey, orderId, status: newStatus })
       await loadData()
     } catch { /* silent */ }
   }
 
   async function handleToggleChat(orderId: string, currentState: boolean) {
     try {
-      await fetch('/api/admin/order-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, chatEnabled: !currentState }),
-      })
+      await updateOrderStatus({ adminKey: adminKey, orderId, chatEnabled: !currentState })
       await loadData()
     } catch { /* silent */ }
   }
