@@ -4,13 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 import { MessageCircle, X, Send, Loader2, Paperclip } from 'lucide-react'
-import { checkChatEligibility, getChatMessages, sendChatMessage } from '@/lib/googleSheets'
 import type { ChatMessage, QuestionnaireUpload } from '@/types'
 import { cn } from '@/lib/utils'
 import { MAX_CHAT_ATTACHMENT_SIZE_MB, MAX_CHAT_ATTACHMENTS, isUploadSizeAllowed, toUploadPayload } from '@/lib/uploads'
 
 const SESSION_KEY = 'eworklife-mon-site-session'
-const POLL_INTERVAL = 15_000
 
 export function ChatWidget() {
   const pathname = usePathname()
@@ -18,29 +16,27 @@ export function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const [attachments, setAttachments] = useState<QuestionnaireUpload[]>([])
   const [clientEmail, setClientEmail] = useState('')
   const [clientName, setClientName] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // ── Check eligibility on mount ──
+  // ── Check session on mount ──
   useEffect(() => {
-    const check = async () => {
-      const email = window.localStorage.getItem(SESSION_KEY)
-      if (!email) {
+    const check = () => {
+      const raw = window.localStorage.getItem(SESSION_KEY)
+      if (!raw) {
         setVisible(false)
         return
       }
-      setClientEmail(email)
       try {
-        const result = await checkChatEligibility(email)
-        if (result.eligible) {
+        const parsed = JSON.parse(raw)
+        if (parsed?.email) {
+          setClientEmail(parsed.email)
+          setClientName(parsed.name || parsed.email.split('@')[0])
           setVisible(true)
-          setClientName(result.clientName || email.split('@')[0])
         } else {
           setVisible(false)
         }
@@ -53,38 +49,13 @@ export function ChatWidget() {
     return () => clearInterval(interval)
   }, [])
 
-  // ── Load messages ──
-  const loadMessages = useCallback(async () => {
-    if (!clientEmail) return
-    try {
-      const result = await getChatMessages(clientEmail)
-      if (result.success) setMessages(result.messages)
-    } catch {
-      /* silent */
-    }
-  }, [clientEmail])
-
-  useEffect(() => {
-    if (open && clientEmail) {
-      setLoading(true)
-      loadMessages().finally(() => setLoading(false))
-      pollRef.current = setInterval(loadMessages, POLL_INTERVAL)
-    }
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-        pollRef.current = null
-      }
-    }
-  }, [open, clientEmail, loadMessages])
-
   // ── Auto-scroll ──
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // ── Send ──
-  const handleSend = async () => {
+  // ── Send message via /api/chat → Discord ──
+  const handleSend = useCallback(async () => {
     if ((!input.trim() && attachments.length === 0) || sending) return
     const msg = input.trim()
     setInput('')
@@ -105,14 +76,21 @@ export function ChatWidget() {
     setMessages((prev) => [...prev, optimistic])
 
     try {
-      await sendChatMessage({ clientEmail, clientName, author: 'client', message: msg, attachments: files })
-      await loadMessages()
+      await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientEmail,
+          clientName,
+          message: msg,
+        }),
+      })
     } catch {
-      /* keep optimistic */
+      /* keep optimistic message */
     } finally {
       setSending(false)
     }
-  }
+  }, [input, attachments, sending, clientEmail, clientName])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -200,11 +178,7 @@ export function ChatWidget() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 size={20} className="text-neutral-300 animate-spin" />
-                </div>
-              ) : messages.length === 0 ? (
+              {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                   <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
                     <MessageCircle size={20} className="text-neutral-400" />

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ClipboardList, CheckCircle2, ChevronRight, Sparkles } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ClipboardList, Clock3, ChevronRight, Sparkles } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { CartSummary } from '@/components/cart/CartSummary'
 import { QuestionnaireModal } from '@/components/cart/QuestionnaireModal'
@@ -19,6 +19,7 @@ export default function CartPage() {
   const [questionnaireDone, setQuestionnaireDone] = useState(false)
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null)
   const [appointment, setAppointment] = useState<AppointmentSelection | null>(null)
+  const [skipAppointment, setSkipAppointment] = useState(false)
 
   const handleComplete = (data: QuestionnaireData) => {
     setQuestionnaireData(data)
@@ -40,7 +41,7 @@ export default function CartPage() {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_20%,rgba(200,190,170,0.08),transparent)]" />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="relative mx-auto max-w-7xl overflow-x-hidden px-4 sm:px-6">
           {/* Page header */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -58,9 +59,9 @@ export default function CartPage() {
             <p className="text-neutral-500 max-w-lg leading-relaxed">{t.cart.subtitle}</p>
           </motion.div>
 
-          <div className="grid lg:grid-cols-[1fr_420px] gap-8 items-start">
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
             {/* Left column */}
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
               {/* Cart summary */}
               <CartSummary />
 
@@ -152,14 +153,62 @@ export default function CartPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: 0.2 }}
+                  className="space-y-4"
                 >
-                  <AppointmentScheduler value={appointment} onChange={setAppointment} />
+                  {!skipAppointment ? (
+                    <>
+                      <AppointmentScheduler value={appointment} onChange={setAppointment} />
+                      <div className="relative overflow-hidden rounded-[1.8rem] border border-neutral-900/80 bg-neutral-950 text-white shadow-[0_30px_90px_-54px_rgba(15,23,42,0.85)]">
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(212,175,55,0.2),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.06),transparent_55%)]" />
+                        <button
+                          type="button"
+                          onClick={() => { setSkipAppointment(true); setAppointment(null) }}
+                          className="relative flex w-full flex-col gap-4 px-6 py-5 text-left transition hover:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-300 text-neutral-950 shadow-[0_18px_36px_-24px_rgba(212,175,55,0.8)]">
+                              <Clock3 size={20} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-200/80">
+                                Option flexible
+                              </p>
+                              <p className="text-lg font-semibold tracking-tight text-white">
+                                Prendre mon créneau plus tard
+                              </p>
+                              <p className="max-w-2xl text-sm leading-relaxed text-white/65">
+                                Passez au paiement maintenant et réservez votre rendez-vous Google Meet ensuite depuis votre espace client.
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-medium text-white/90 sm:self-center">
+                            Continuer
+                            <ArrowRight size={15} />
+                          </span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-[2rem] border border-blue-200/60 bg-blue-50/30 backdrop-blur-sm p-6 text-center space-y-3">
+                      <p className="text-sm text-blue-700">
+                        Vous pourrez réserver votre rendez-vous Google Meet depuis votre <span className="font-medium">espace client</span> après la commande.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setSkipAppointment(false)}
+                        className="text-xs text-blue-500 hover:text-blue-700 underline underline-offset-2 transition-colors"
+                      >
+                        Finalement, je veux choisir un créneau maintenant
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               ) : null}
             </div>
 
             {/* Right column — payment */}
-            <div>
+            <div className="min-w-0">
               <AnimatePresence>
                 {questionnaireDone && (
                   <motion.div
@@ -168,7 +217,7 @@ export default function CartPage() {
                     exit={{ opacity: 0, y: 20, scale: 0.97 }}
                     transition={{ duration: 0.5, type: 'spring', stiffness: 200, damping: 20 }}
                   >
-                    <PaymentBlock questionnaireData={questionnaireData} appointment={appointment} />
+                    <PaymentBlock questionnaireData={questionnaireData} appointment={appointment} skipAppointment={skipAppointment} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -189,7 +238,7 @@ export default function CartPage() {
                 </motion.div>
               )}
 
-              {questionnaireDone && !appointment ? (
+              {questionnaireDone && !appointment && !skipAppointment ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -197,7 +246,7 @@ export default function CartPage() {
                   className="mt-4 bg-white/30 backdrop-blur-sm border border-neutral-200/40 rounded-3xl p-8 text-center space-y-3"
                 >
                   <p className="text-sm text-neutral-500 leading-relaxed">
-                    Sélectionne d’abord un rendez-vous Google Meet pour débloquer le paiement démo.
+                    Sélectionnez un rendez-vous Google Meet ou choisissez de le planifier plus tard pour débloquer le paiement.
                   </p>
                 </motion.div>
               ) : null}

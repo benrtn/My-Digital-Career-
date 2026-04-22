@@ -1,0 +1,25 @@
+[
+  {
+    "id": "rdv-1775506947625",
+    "email": "cadichon2001@gmail.com",
+    "firstName": "Benjiji",
+    "lastName": "Ben Ikhmim",
+    "startAt": "2026-04-10T12:00:00.000Z",
+    "endAt": "2026-04-10T13:00:00.000Z",
+    "durationMinutes": 60,
+    "mode": "google_meet",
+    "createdAt": "2026-04-06T20:22:27.625Z"
+  },
+  {
+    "id": "rdv-1776046207776",
+    "email": "ikhmimb@gmail.com",
+    "firstName": "Benjamin",
+    "lastName": "ikhmim",
+    "startAt": "2026-04-23T14:00:00.000Z",
+    "endAt": "2026-04-23T15:00:00.000Z",
+    "durationMinutes": 60,
+    "mode": "google_meet",
+    "orderId": "MDC-260413-4FLK",
+    "createdAt": "2026-04-13T02:10:07.776Z"
+  }
+]

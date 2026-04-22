@@ -7,53 +7,37 @@ export function Footer() {
   const { t } = useLanguage()
 
   return (
-    <footer className="bg-neutral-950 text-neutral-400 relative">
+    <footer className="relative overflow-hidden bg-neutral-950 text-neutral-400">
       <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        className="pointer-events-none absolute inset-0 opacity-[0.04]"
         style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
           backgroundSize: '60px 60px',
         }}
       />
-      <div className="max-w-7xl mx-auto px-6 py-14 relative">
-        <div className="grid grid-cols-1 gap-12 mb-12">
-          {/* Brand */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center">
-                <span className="text-neutral-950 text-xs font-bold tracking-tight">MDC</span>
-              </div>
-              <span className="font-semibold text-white tracking-tight">My Digital Career</span>
-            </div>
-            <p className="text-sm text-neutral-500 leading-relaxed max-w-xs">
-              {t.footer.tagline}
-            </p>
-          </div>
-        </div>
 
-        {/* Bottom bar */}
-        <div className="pt-8 border-t border-neutral-800/60 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+      <div className="relative mx-auto max-w-7xl px-6 py-12">
+        <div className="flex flex-col gap-8 rounded-[2rem] border border-white/8 bg-white/[0.02] p-6 shadow-[0_24px_80px_-56px_rgba(0,0,0,0.85)] backdrop-blur-xl">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center">
-                  <span className="text-neutral-950 text-xs font-bold tracking-tight">MDC</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white">
+                  <span className="text-xs font-bold tracking-tight text-neutral-950">MDC</span>
                 </div>
-                <span className="font-semibold text-white tracking-tight">My Digital Career</span>
+                <span className="font-semibold tracking-tight text-white">My Digital Career</span>
               </div>
-              <span className="hidden sm:inline text-sm text-neutral-500">
+              <p className="max-w-md text-sm leading-relaxed text-neutral-500">
                 {t.footer.tagline}
-              </span>
+              </p>
             </div>
+
             <p className="text-xs text-neutral-600">{t.footer.copyright}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm text-neutral-500">{t.footer.legalButton}</span>
-          </div>
+          <LegalDock variant="inline" />
         </div>
       </div>
-      <LegalDock />
     </footer>
   )
 }

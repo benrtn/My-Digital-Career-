@@ -7,13 +7,13 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { ClientChatPanel } from '@/components/chat/ClientChatPanel'
-import { findClientSiteAccess, findClientSiteAccessByEmail } from '@/data/siteAccess'
 import { trackEvent } from '@/lib/analytics'
+// Chat eligibility is now simplified — if account exists, chat is available
+// trackClientEvent is done via /api/chat or local only
 import { checkChatEligibility, trackClientEvent } from '@/lib/googleSheets'
 import { isValidEmail } from '@/lib/utils'
 import type { AppointmentSelection, ClientSiteAccess } from '@/types'
 
-const STORAGE_KEY = 'eworklife-mon-site-session'
 const REVIEW_STORAGE_PREFIX = 'eworklife-mon-site-review-'
 const PREVIEW_VIEWED_STORAGE_PREFIX = 'eworklife-mon-site-preview-viewed-'
 const APPROVED_STORAGE_PREFIX = 'eworklife-mon-site-approved-'
@@ -68,27 +68,35 @@ export default function MonSitePage() {
   }, [previewOpen, closePreview])
 
   useEffect(() => {
-    const storedSession = window.localStorage.getItem(STORAGE_KEY)
-    if (storedSession) {
+    let cancelled = false
+
+    const restoreSession = async () => {
       try {
-        const parsed = JSON.parse(storedSession) as ClientSiteAccess
-        if (parsed?.email) {
-          setAccount(parsed)
-          setEmail(parsed.email)
+        const response = await fetch('/api/client-auth', { cache: 'no-store' })
+        const result = await response.json() as {
+          authenticated?: boolean
+          account?: ClientSiteAccess
+        }
+
+        if (cancelled) return
+
+        if (result.authenticated && result.account) {
+          setAccount(result.account)
+          setEmail(result.account.email)
         }
       } catch {
-        const storedAccount = findClientSiteAccessByEmail(storedSession)
-        if (storedAccount) {
-          setAccount(storedAccount)
-          setEmail(storedAccount.email)
-        } else {
-          window.localStorage.removeItem(STORAGE_KEY)
+        if (cancelled) return
+      } finally {
+        if (!cancelled) {
+          setHydrated(true)
         }
       }
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY)
     }
-    setHydrated(true)
+
+    void restoreSession()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -271,15 +279,6 @@ export default function MonSitePage() {
     }
 
     const run = async () => {
-      const staticMatch = findClientSiteAccess(email, password)
-      if (staticMatch) {
-        setAccount(staticMatch)
-        setPassword('')
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(staticMatch))
-        trackEvent('client_login', { method: 'password' })
-        return
-      }
-
       try {
         const response = await fetch('/api/client-auth', {
           method: 'POST',
@@ -295,7 +294,6 @@ export default function MonSitePage() {
 
         setAccount(result.account)
         setPassword('')
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(result.account))
         trackEvent('client_login', { method: 'password' })
       } catch {
         setError(t.mySite.errors.invalid)
@@ -306,10 +304,11 @@ export default function MonSitePage() {
   }
 
   function handleLogout() {
+    void fetch('/api/client-auth', { method: 'DELETE' })
     setAccount(null)
+    setEmail('')
     setPassword('')
     setError('')
-    window.localStorage.removeItem(STORAGE_KEY)
   }
 
   function handleRequestChanges() {

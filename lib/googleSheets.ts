@@ -23,9 +23,23 @@ async function postApi(payload: Record<string, unknown>): Promise<ApiResult> {
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
+      cache: 'no-store',
       body: JSON.stringify(payload),
     })
-    const json = await res.json()
+
+    const json = await res.json() as Record<string, unknown>
+    const error =
+      !res.ok
+        ? `HTTP ${res.status}`
+        : typeof json.error === 'string'
+          ? json.error
+          : undefined
+
+    if (error) {
+      console.error(`[GoogleSheets] POST error (${payload.action}):`, error, json)
+      return { success: false, error, data: json }
+    }
+
     return { success: true, data: json }
   } catch (err) {
     console.error(`[GoogleSheets] POST error (${payload.action}):`, err)
@@ -45,8 +59,20 @@ async function getApi(params: Record<string, string>): Promise<ApiResult> {
   try {
     const url = new URL(endpoint)
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-    const res = await fetch(url.toString())
-    const json = await res.json()
+    const res = await fetch(url.toString(), { cache: 'no-store' })
+    const json = await res.json() as Record<string, unknown>
+    const error =
+      !res.ok
+        ? `HTTP ${res.status}`
+        : typeof json.error === 'string'
+          ? json.error
+          : undefined
+
+    if (error) {
+      console.error('[GoogleSheets] GET error:', error, json)
+      return { success: false, error, data: json }
+    }
+
     return { success: true, data: json }
   } catch (err) {
     console.error('[GoogleSheets] GET error:', err)
@@ -71,8 +97,8 @@ export async function submitQuestionnaire(
     password: data.password,
     profession: data.profession,
     seekingJob: data.seekingJob === null ? '' : data.seekingJob ? 'Oui' : 'Non',
-    positionsSearched: data.positionsSearched.filter((p) => p.trim()).join(' | '),
-    motivations: data.motivations.join(' | '),
+    positionsSearched: data.positionsSearched.filter((p) => p.trim()).join(', '),
+    motivations: data.motivations.join(', '),
     motivationOther: data.motivationOther,
     colorPalette: data.colorPalette,
     siteStyle: data.siteStyle,
@@ -81,7 +107,7 @@ export async function submitQuestionnaire(
     socialLinks: data.socialLinks
       .filter((l) => l.name && l.url)
       .map((l) => `${l.name.startsWith('other:') ? l.name.replace('other:', '') : l.name}: ${l.url}`)
-      .join(' | '),
+      .join(', '),
     cvFile: data.cvLink,
     photoFile: data.photoLink,
     extraFile: data.extraLink,
@@ -130,7 +156,7 @@ export async function submitOrder(data: {
     lastName: data.lastName,
     email: data.email,
     profession: data.profession,
-    positionsSearched: data.positionsSearched.join(' | '),
+    positionsSearched: data.positionsSearched.join(', '),
     colorPalette: data.colorPalette,
     siteStyle: data.siteStyle,
     amount: data.amount,

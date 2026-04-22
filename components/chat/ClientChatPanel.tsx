@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Loader2, MessageCircle, Paperclip, Send } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { getChatMessages, sendChatMessage } from '@/lib/googleSheets'
+// Chat messages go to Discord only via /api/chat
 import type { ChatMessage, QuestionnaireUpload } from '@/types'
 import { cn } from '@/lib/utils'
 import { MAX_CHAT_ATTACHMENT_SIZE_MB, MAX_CHAT_ATTACHMENTS, isUploadSizeAllowed, toUploadPayload } from '@/lib/uploads'
@@ -27,13 +27,8 @@ export function ClientChatPanel({ clientEmail, clientName }: ClientChatPanelProp
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const loadMessages = useCallback(async () => {
-    if (!clientEmail) return
-    try {
-      const result = await getChatMessages(clientEmail)
-      if (result.success) setMessages(result.messages)
-    } catch {
-      /* silent */
-    }
+    // Messages are sent to Discord only — no server-side storage to poll
+    // Local messages are kept in component state (optimistic)
   }, [clientEmail])
 
   useEffect(() => {
@@ -76,8 +71,11 @@ export function ClientChatPanel({ clientEmail, clientName }: ClientChatPanelProp
     setMessages((prev) => [...prev, optimistic])
 
     try {
-      await sendChatMessage({ clientEmail, clientName, author: 'client', message: msg, attachments: files })
-      await loadMessages()
+      await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientEmail, clientName, message: msg }),
+      })
     } catch {
       /* keep optimistic */
     } finally {

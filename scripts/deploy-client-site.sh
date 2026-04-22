@@ -18,7 +18,7 @@
 #    1. Décompresse le .zip dans public/clients-sites/<client-id>/
 #    2. Copie le screenshot/preview si présent
 #    3. Met à jour la redirection HTML dans public/client-downloads/
-#    4. Affiche les instructions pour mettre à jour siteAccess.ts
+#    4. Affiche les instructions de finalisation admin
 #
 # ═══════════════════════════════════════════════════════════
 
@@ -125,17 +125,9 @@ echo "  - public/clients-sites/${CLIENT_ID}/"
 echo ""
 echo -e "${YELLOW}Actions restantes :${NC}"
 echo ""
-echo "  1. Mettre à jour data/siteAccess.ts avec les infos du client :"
+echo "  1. Vérifier que le dossier client privé existe bien dans data/client-downloads/"
 echo ""
-echo "     {"
-echo "       id: '${CLIENT_ID}',"
-echo "       name: 'NOM_CLIENT',"
-echo "       email: 'EMAIL_CLIENT',"
-echo "       password: 'MOT_DE_PASSE',"
-echo "       siteUrl: '${NETLIFY_URL:-https://VOTRE_URL.netlify.app/}',"
-echo "       previewImagePath: '/creation/site${CLIENT_ID}.webp',"
-echo "       downloadPath: '/clients-sites/${CLIENT_ID}-site.zip',"
-echo "     }"
+echo "     puis attacher le bon site/ZIP au client depuis le back-office."
 echo ""
 echo "  2. Depuis l'admin, cliquer sur 'Envoyer 1ère version'"
 echo "     pour notifier le client par email."

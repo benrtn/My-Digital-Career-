@@ -1,15 +1,36 @@
+/**
+ * GET  /api/client-downloads?email=xxx — lookup client folder
+ * POST /api/client-downloads — create client folder with hashed password
+ *
+ * SECURITY: Passwords are hashed with bcrypt before being stored in a private metadata.json.
+ * The plaintext password is NEVER written to disk or into /public.
+ */
+
 import { NextResponse } from 'next/server'
 import { mkdir, readFile, readdir, writeFile } from 'fs/promises'
 import path from 'path'
 import { buildClientFolderName } from '@/lib/clientDownloads'
+import { hashPassword } from '@/lib/auth'
+import { getAdminSessionFromRequest, getClientSessionFromRequest } from '@/lib/session.server'
 import type { AppointmentSelection } from '@/types'
 
 export const runtime = 'nodejs'
 
-const CLIENT_DOWNLOADS_DIR = path.join(process.cwd(), 'public', 'client-downloads')
+const CLIENT_DOWNLOADS_PUBLIC_DIR = path.join(process.cwd(), 'public', 'client-downloads')
+const CLIENT_DOWNLOADS_PRIVATE_DIR = path.join(process.cwd(), 'data', 'client-downloads')
 
 export async function GET(request: Request) {
   try {
+    const adminSession = await getAdminSessionFromRequest(request)
+    const clientSession = adminSession ? null : await getClientSessionFromRequest(request)
+
+    if (!adminSession && !clientSession) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')?.trim().toLowerCase()
     const folder = searchParams.get('folder')?.trim()
@@ -22,12 +43,22 @@ export async function GET(request: Request) {
     }
 
     const entry = await findClientFolder({ email, folder })
+    const requestedEmail = email || entry?.clientEmail || null
+
+    if (!adminSession && clientSession && requestedEmail && requestedEmail !== clientSession.sub) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
 
     if (!entry) {
       return NextResponse.json({ success: true, found: false })
     }
 
-    return NextResponse.json({ success: true, found: true, ...entry })
+    const { clientEmail, ...publicEntry } = entry
+
+    return NextResponse.json({ success: true, found: true, ...publicEntry })
   } catch (error) {
     console.error('[client-downloads] Folder lookup failed:', error)
     return NextResponse.json(
@@ -39,7 +70,18 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as {
+    // Only admins or the authenticated client themselves may create a folder.
+    const adminSession = await getAdminSessionFromRequest(request)
+    const clientSession = adminSession ? null : await getClientSessionFromRequest(request)
+
+    if (!adminSession && !clientSession) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const body = (await request.json()) as {
       firstName?: string
       lastName?: string
       email?: string
@@ -67,16 +109,31 @@ export async function POST(request: Request) {
       )
     }
 
-    const folderName = buildClientFolderName(lastName, firstName)
-    const targetDir = path.join(CLIENT_DOWNLOADS_DIR, folderName)
+    // A client session may only create a folder for its own email.
+    if (!adminSession && clientSession && email.toLowerCase() !== clientSession.sub.toLowerCase()) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
 
-    await mkdir(targetDir, { recursive: true })
+    const folderName = buildClientFolderName(lastName, firstName)
+    const publicDir = path.join(CLIENT_DOWNLOADS_PUBLIC_DIR, folderName)
+    const privateDir = path.join(CLIENT_DOWNLOADS_PRIVATE_DIR, folderName)
+
+    await Promise.all([
+      mkdir(publicDir, { recursive: true }),
+      mkdir(privateDir, { recursive: true }),
+    ])
+
+    // Hash the password — NEVER store plaintext
+    const passwordHash = password ? await hashPassword(password) : ''
 
     const metadata = {
       firstName,
       lastName,
       email,
-      password,
+      passwordHash, // bcrypt hash, NOT plaintext
       orderId,
       folderName,
       createdAt,
@@ -85,7 +142,7 @@ export async function POST(request: Request) {
     }
 
     await writeFile(
-      path.join(targetDir, 'metadata.json'),
+      path.join(privateDir, 'metadata.json'),
       JSON.stringify(metadata, null, 2),
       'utf8'
     )
@@ -114,20 +171,31 @@ async function findClientFolder({
   email?: string
   folder?: string
 }) {
-  const entries = await readdir(CLIENT_DOWNLOADS_DIR, { withFileTypes: true })
+  let dirEntries: string[]
+  try {
+    dirEntries = await readdir(CLIENT_DOWNLOADS_PUBLIC_DIR)
+  } catch {
+    return null
+  }
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-    if (folder && entry.name !== folder) continue
+  for (const entryName of dirEntries) {
+    if (folder && entryName !== folder) continue
 
-    const folderPath = path.join(CLIENT_DOWNLOADS_DIR, entry.name)
-    const metadataPath = path.join(folderPath, 'metadata.json')
+    const folderPath = path.join(CLIENT_DOWNLOADS_PUBLIC_DIR, entryName)
+
+    // Check if it's a directory
+    try {
+      const stat = await import('fs/promises').then((m) => m.stat(folderPath))
+      if (!stat.isDirectory()) continue
+    } catch {
+      continue
+    }
+    const metadataPath = path.join(CLIENT_DOWNLOADS_PRIVATE_DIR, entryName, 'metadata.json')
 
     let metadata: {
       firstName?: string
       lastName?: string
       email?: string
-      password?: string
       orderId?: string
       createdAt?: string
       unlockAt?: string
@@ -159,13 +227,14 @@ async function findClientFolder({
     const remainingMs = unlockAt ? Math.max(new Date(unlockAt).getTime() - Date.now(), 0) : 0
 
     return {
-      folderName: entry.name,
+      folderName: entryName,
+      clientEmail: metadata?.email?.trim().toLowerCase() ?? null,
       createdAt,
       unlockAt,
       remainingMs,
-      zipUrl: zipFile ? `/client-downloads/${entry.name}/${zipFile}` : null,
-      previewUrl: htmlFile ? `/client-downloads/${entry.name}/${htmlFile}` : null,
-      previewImageUrl: previewImage ? `/client-downloads/${entry.name}/${previewImage}` : null,
+      zipUrl: zipFile ? `/client-downloads/${entryName}/${zipFile}` : null,
+      previewUrl: htmlFile ? `/client-downloads/${entryName}/${htmlFile}` : null,
+      previewImageUrl: previewImage ? `/client-downloads/${entryName}/${previewImage}` : null,
       hasZip: Boolean(zipFile),
       hasPreview: Boolean(htmlFile),
       readyAt: remainingMs === 0,

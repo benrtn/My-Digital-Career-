@@ -1,0 +1,19 @@
+{
+  "firstName": "Benjamin",
+  "lastName": "ikhmim",
+  "email": "ikhmimb@gmail.com",
+  "passwordHash": "$2b$10$psPXFB..S47fN7iipuLCEORDsYEVJp4ue8FUYU30n8fDG.OWXwjOi",
+  "orderId": "MDC-260413-4FLK",
+  "folderName": "ikhmim-b",
+  "createdAt": "2026-04-13T02:10:08.088Z",
+  "unlockAt": "2026-04-14T02:10:08.088Z",
+  "appointment": {
+    "slotId": "2026-04-23T14:00:00.000Z-60",
+    "startAt": "2026-04-23T14:00:00.000Z",
+    "endAt": "2026-04-23T15:00:00.000Z",
+    "dateLabel": "jeudi 23 avril",
+    "timeLabel": "16:00 - 17:00",
+    "durationMinutes": 60,
+    "mode": "google_meet"
+  }
+}

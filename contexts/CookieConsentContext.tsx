@@ -88,6 +88,19 @@ export function CookieConsentProvider({ children }: { children: React.ReactNode 
     setState(nextState)
     persistState(nextState)
     setIsPreferencesOpen(false)
+
+    // Persist server-side (Google Sheets). Fire-and-forget — UI already updated.
+    void fetch('/api/cookie-consent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        analytics: preferences.analytics,
+        payments: preferences.payments,
+      }),
+      credentials: 'same-origin',
+    }).catch(() => {
+      // Server persistence is best-effort; local state is already saved.
+    })
   }, [])
 
   const acceptAll = useCallback(() => {

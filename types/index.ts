@@ -127,10 +127,11 @@ export interface ClientSiteAccess {
   id: string
   name: string
   email: string
-  password: string
   siteUrl: string
   previewImagePath: string
   downloadPath: string
+  orderId?: string
+  token?: string
 }
 
 export interface ChatMessage {

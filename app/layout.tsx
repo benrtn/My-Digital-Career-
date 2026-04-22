@@ -50,7 +50,7 @@ export default function RootLayout({
         <LanguageProvider>
           <CookieConsentProvider>
             <Header />
-            <main className="pb-28 md:pb-24">{children}</main>
+            <main>{children}</main>
             <ChatWidget />
             <Footer />
             <ConsentAwareAnalytics />

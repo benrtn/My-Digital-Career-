@@ -23,15 +23,15 @@
 // CONFIGURATION — À REMPLACER PAR VOS VALEURS
 // ═══════════════════════════════════════════════
 
-var SPREADSHEET_COMMANDE = '1dxEE12fXMzXi2NPzviiy9jm1uiFDo0hRApCkiQFipw0';
-var SPREADSHEET_ID_CLIENT = '1dxEE12fXMzXi2NPzviiy9jm1uiFDo0hRApCkiQFipw0';
-var ADMIN_SECRET_KEY = 'Ben17062001';
-var DISCORD_WEBHOOK_NOTIFICATIONS_URL = 'https://discord.com/api/webhooks/1489700064199704738/_-sp81Ihak6XCdLXYRq1g5yJMPoh8slEf1sRqmbz7M4UXLhYDh83IpsAWkUtwlrhHS21';
-var DISCORD_WEBHOOK_QUESTIONNAIRES_URL = 'https://discord.com/api/webhooks/1489701434869027099/gFerOKFLyyR1azw0WguyKm-glNEWYLJiB6e0fqRzWSqanP_PSBKkEY_gySavR6R37TDc';
-var DISCORD_WEBHOOK_CHAT_URL = 'https://discord.com/api/webhooks/1489701236327448607/_mS8_VgosnNafeUUEIeZFDIPXh5eFF0EQLFJKc53vnk8uIpwzFEWNyhGVn7eziOLxWSO';
-var DRIVE_EWORKLIFE_FOLDER_ID = '1xL2yamwr-6HzxeMQJw8AeSMtXTTMm7If';
-var DRIVE_COMMANDES_CLIENT_FOLDER_ID = '1cEN3GapKwZXDhuJFW6p51bT5bOX84VeI';
-var DRIVE_PJ_CLIENT_FOLDER_ID = '1innr0ZzUV1e4Lc4a5qrox7_KglUPLboD';
+var SPREADSHEET_COMMANDE = 'REPLACE_WITH_SPREADSHEET_ID';
+var SPREADSHEET_ID_CLIENT = 'REPLACE_WITH_SPREADSHEET_ID';
+var ADMIN_SECRET_KEY = 'REPLACE_WITH_ADMIN_SECRET';
+var DISCORD_WEBHOOK_NOTIFICATIONS_URL = 'REPLACE_WITH_DISCORD_NOTIFICATIONS_WEBHOOK';
+var DISCORD_WEBHOOK_QUESTIONNAIRES_URL = 'REPLACE_WITH_DISCORD_QUESTIONNAIRES_WEBHOOK';
+var DISCORD_WEBHOOK_CHAT_URL = 'REPLACE_WITH_DISCORD_CHAT_WEBHOOK';
+var DRIVE_EWORKLIFE_FOLDER_ID = 'REPLACE_WITH_DRIVE_ROOT_FOLDER_ID';
+var DRIVE_COMMANDES_CLIENT_FOLDER_ID = 'REPLACE_WITH_DRIVE_COMMANDES_FOLDER_ID';
+var DRIVE_PJ_CLIENT_FOLDER_ID = 'REPLACE_WITH_DRIVE_PJ_FOLDER_ID';
 var DRIVE_PJ_CLIENT_FOLDER_NAME = 'PJ CLIENT';
 
 // ═══════════════════════════════════════════════
@@ -72,6 +72,8 @@ function doPost(e) {
         return handleSendAccountCreationEmail(data);
       case 'sendOrderConfirmationEmail':
         return handleSendOrderConfirmationEmail(data);
+      case 'sendPaymentConfirmationEmail':
+        return handleSendPaymentConfirmationEmail(data);
       case 'sendAppointmentConfirmationEmail':
         return handleSendAppointmentConfirmationEmail(data);
       case 'saveAppointment':
@@ -452,7 +454,7 @@ function handleSendFirstVersionEmail(data) {
       siteUrl ? 'Votre site est accessible ici : <a href="' + siteUrl + '" style="color:#2563EB">' + siteUrl + '</a>' : ''
     ],
     'Accéder à Mon site',
-    'https://e-worklife.com/mon-site'
+    'https://mydigitalcareer.com/mon-site'
   );
 
   try {
@@ -517,7 +519,7 @@ function handleSendAccountCreationEmail(data) {
       'Conservez précieusement ces identifiants. Vous en aurez besoin pour accéder à votre E-CV une fois prêt.'
     ],
     'Accéder à Mon site',
-    'https://e-worklife.com/mon-site'
+    'https://mydigitalcareer.com/mon-site'
   );
 
   try {
@@ -573,7 +575,7 @@ function handleSendOrderConfirmationEmail(data) {
       'En attendant, vous pouvez suivre l\'avancement depuis votre espace <strong>« Mon site »</strong>.'
     ],
     'Suivre ma commande',
-    'https://e-worklife.com/mon-site'
+    'https://mydigitalcareer.com/mon-site'
   );
 
   try {
@@ -587,6 +589,53 @@ function handleSendOrderConfirmationEmail(data) {
     return jsonResponse({ success: true, message: 'Email de confirmation envoyé à ' + email });
   } catch (err) {
     return jsonResponse({ error: 'Erreur envoi email confirmation: ' + err.toString() });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// EMAIL — Confirmation de paiement
+// ═══════════════════════════════════════════════
+
+function handleSendPaymentConfirmationEmail(data) {
+  var email = data.email;
+  var name = data.name || data.firstName || 'Client';
+  var orderId = data.orderId || '';
+  var amount = data.amount || '20';
+  var currency = data.currency || '€';
+
+  if (!email) {
+    return jsonResponse({ error: 'Email requis' });
+  }
+
+  var subject = 'My Digital Career — Paiement confirmé' + (orderId ? ' ' + orderId : '');
+  var htmlBody = buildEmailTemplate(
+    'Paiement confirmé' + (orderId ? ' — ' + orderId : ''),
+    'Bonjour ' + name + ',',
+    [
+      'Votre paiement a bien été reçu. Merci pour votre confiance.',
+      '<div style="background:#F8F8F6;border-radius:12px;padding:20px;margin:8px 0">'
+      + '<p style="margin:0 0 6px;font-size:13px;color:#888">Récapitulatif :</p>'
+      + (orderId ? '<p style="margin:0 0 4px;font-size:14px"><strong>N° Commande :</strong> ' + orderId + '</p>' : '')
+      + '<p style="margin:0;font-size:14px"><strong>Montant réglé :</strong> ' + amount + ' ' + currency + '</p>'
+      + '</div>',
+      'Votre commande passe maintenant en traitement. Vous recevrez un email dès que la première version sera prête.',
+      'Vous pouvez suivre l’avancement à tout moment depuis votre espace <strong>« Mon site »</strong>.'
+    ],
+    'Suivre ma commande',
+    'https://mydigitalcareer.com/mon-site'
+  );
+
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      htmlBody: htmlBody,
+      name: 'My Digital Career'
+    });
+
+    return jsonResponse({ success: true, message: 'Email de confirmation paiement envoyé à ' + email });
+  } catch (err) {
+    return jsonResponse({ error: 'Erreur envoi email paiement: ' + err.toString() });
   }
 }
 
@@ -625,7 +674,7 @@ function handleSendAppointmentConfirmationEmail(data) {
       'Si vous avez besoin de modifier votre créneau, contactez-nous directement.'
     ],
     meetLink ? 'Rejoindre le Meet' : 'Mon espace client',
-    meetLink || 'https://e-worklife.com/mon-site'
+    meetLink || 'https://mydigitalcareer.com/mon-site'
   );
 
   try {
