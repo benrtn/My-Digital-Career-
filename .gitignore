@@ -26,4 +26,10 @@ npm-debug.log*
 # local workspace artifacts
 .audit-shots/
 .claude/
-.vercel
+
+# client file uploads — track directory but not contents
+/uploads/client-downloads/*
+!/uploads/client-downloads/.gitkeep
+
+# legacy appointments file (migrated to Google Sheets)
+/data/appointments.json

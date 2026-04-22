@@ -9,19 +9,12 @@ import {
   getGoogleCalendarBusySlots,
   isGoogleCalendarConfigured,
 } from '@/lib/googleCalendar'
+import { saveAppointmentToSheets } from '@/lib/googleSheets'
 import {
-  appendAppointmentRow,
-  isGoogleSheetsConfigured,
-  readAppointments as readAppointmentsFromSheets,
-  updateOrderAppointment,
-} from '@/lib/googleSheetsApi'
-import {
-  isAppsScriptConfigured,
-  saveAppointmentViaAppsScript,
-  sendAppointmentConfirmationEmailViaAppsScript,
-} from '@/lib/googleAppsScript.server'
-import { notifyAppointmentBooked } from '@/lib/discord'
-import { getAdminSessionFromRequest, getClientSessionFromRequest } from '@/lib/session.server'
+  readAppointmentsFromSheets,
+  appendAppointmentToSheets,
+} from '@/lib/sheetsApi'
+import type { SheetAppointmentRecord } from '@/lib/sheetsApi'
 
 export const runtime = 'nodejs'
 
@@ -30,26 +23,9 @@ const DURATION_MINUTES = 60
 const BUSINESS_HOURS = { start: 7, end: 22 }
 const TIMEZONE = 'Europe/Paris'
 
-type AppointmentRecord = {
-  id: string
-  email: string
-  firstName: string
-  lastName: string
-  startAt: string
-  endAt: string
-  durationMinutes: number
-  mode: 'google_meet'
-  meetLink?: string
-  eventId?: string
-  orderId?: string
-  createdAt: string
-}
-
-function extractCalendarError(error: unknown): { status: number; message: string } {
-  const fallback = {
-    status: 502,
-    message: 'Impossible de contacter Google Calendar pour le moment.',
-  }
+// ---------------------------------------------------------------------------
+// Timezone helpers
+// ---------------------------------------------------------------------------
 
   if (!error || typeof error !== 'object') {
     return fallback
@@ -190,36 +166,19 @@ function formatTimeLabel(date: Date): string {
   })
 }
 
-async function readAppointments(): Promise<AppointmentRecord[]> {
-  if (!isGoogleSheetsConfigured()) return []
-  try {
-    const rows = await readAppointmentsFromSheets()
-    return rows.map((row) => ({
-      id: row['ID'] ?? '',
-      email: (row['Email'] ?? '').toLowerCase(),
-      lastName: row['Nom'] ?? '',
-      firstName: row['Prénom'] ?? '',
-      startAt: row['Début (UTC)'] ?? '',
-      endAt: row['Fin (UTC)'] ?? '',
-      durationMinutes: Number(row['Durée (min)'] ?? DURATION_MINUTES) || DURATION_MINUTES,
-      mode: 'google_meet' as const,
-      meetLink: row['Lien Meet'] || undefined,
-      eventId: row['Event ID'] || undefined,
-      orderId: row['N° Commande'] || undefined,
-      createdAt: row['Date création'] ?? '',
-    }))
-    .filter((record) => record.startAt && record.endAt)
-  } catch (error) {
-    console.error('[appointments] readAppointments failed:', error)
-    return []
-  }
-}
+// ---------------------------------------------------------------------------
+// Overlap check
+// ---------------------------------------------------------------------------
 
 function overlaps(startA: Date, endA: Date, startB: Date, endB: Date): boolean {
   return startA < endB && endA > startB
 }
 
-async function buildSlots(appointments: AppointmentRecord[]) {
+// ---------------------------------------------------------------------------
+// Slot generation — uses Sheets appointments + Google Calendar busy slots
+// ---------------------------------------------------------------------------
+
+async function buildSlots(appointments: SheetAppointmentRecord[]) {
   const now = new Date()
   const minBookingTime = now.getTime() + 24 * 60 * 60 * 1000
 
@@ -301,24 +260,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')?.trim().toLowerCase()
-    const adminSession = await getAdminSessionFromRequest(request)
-    const clientSession = adminSession ? null : await getClientSessionFromRequest(request)
-
-    if (email && !adminSession && !clientSession) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    if (email && clientSession && clientSession.sub !== email) {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden' },
-        { status: 403 }
-      )
-    }
-
-    const appointments = await readAppointments()
+    const appointments = await readAppointmentsFromSheets()
 
     if (email) {
       const appointment = appointments
@@ -409,9 +351,9 @@ export async function POST(request: Request) {
     }
 
     const endDate = new Date(startDate.getTime() + DURATION_MINUTES * 60 * 1000)
-    const appointments = await readAppointments()
+    const appointments = await readAppointmentsFromSheets()
 
-    const conflictsWithLocal = appointments.some((item) =>
+    const conflictsWithAppointment = appointments.some((item) =>
       overlaps(startDate, endDate, new Date(item.startAt), new Date(item.endAt))
     )
 
@@ -444,17 +386,7 @@ export async function POST(request: Request) {
       attendeeEmail: email,
     })
 
-    if (!calendarResult.eventId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Google Calendar n’a pas confirmé la création de l’événement.',
-        },
-        { status: 502 }
-      )
-    }
-
-    const record: AppointmentRecord = {
+    const record: SheetAppointmentRecord & { orderId: string } = {
       id: `rdv-${Date.now()}`,
       email,
       firstName,
@@ -467,107 +399,28 @@ export async function POST(request: Request) {
       eventId: calendarResult.eventId,
       orderId: orderId || undefined,
       createdAt: new Date().toISOString(),
+      orderId,
     }
 
-    const dateLabel = formatDateLabel(startDate)
-    const timeLabel = `${formatTimeLabel(startDate)} - ${formatTimeLabel(endDate)}`
-    const warnings: string[] = []
+    // Write to Google Sheets (primary store)
+    await appendAppointmentToSheets(record)
 
-    if (isGoogleSheetsConfigured()) {
-      const appointmentSaved = await appendAppointmentRow({
-        id: record.id,
-        createdAt: record.createdAt,
-        email,
-        lastName,
-        firstName,
-        startAt: record.startAt,
-        endAt: record.endAt,
-        durationMinutes: record.durationMinutes,
-        mode: record.mode,
-        meetLink: record.meetLink,
-        eventId: record.eventId,
-        orderId: record.orderId,
-      })
-
-      if (!appointmentSaved) {
-        warnings.push('Rendez-vous non enregistré dans l’onglet Google Sheets "Rendez-vous"')
-      }
-
-      if (orderId) {
-        const orderUpdated = await updateOrderAppointment(
-          orderId,
-          dateLabel,
-          timeLabel,
-          calendarResult.meetLink ?? '',
-          calendarResult.eventId
-        )
-
-        if (!orderUpdated) {
-          warnings.push(`La ligne "${orderId}" n’a pas pu être mise à jour dans "Suivie des commandes"`)
-        }
-      }
-    } else {
-      const fallbackSave = await saveAppointmentViaAppsScript({
-        id: record.id,
-        createdAt: record.createdAt,
-        email,
-        firstName,
-        lastName,
-        startAt: record.startAt,
-        endAt: record.endAt,
-        durationMinutes: record.durationMinutes,
-        mode: record.mode,
-        meetLink: record.meetLink || '',
-        eventId: record.eventId || '',
-        orderId: record.orderId || '',
-        dateLabel,
-        timeLabel,
-      })
-
-      if (!fallbackSave.success) {
-        warnings.push(`Persistance Apps Script du rendez-vous: ${fallbackSave.error || 'échec inconnu'}`)
-      }
-
-      if (orderId) {
-        warnings.push(
-          'Le rendez-vous a été enregistré, mais "Suivie des commandes" n’a pas été synchronisé faute d’accès direct Google Sheets.'
-        )
-      }
-    }
-
-    if (isAppsScriptConfigured()) {
-      const emailResult = await sendAppointmentConfirmationEmailViaAppsScript({
-        email,
-        name: clientName,
-        firstName,
-        dateLabel,
-        timeLabel,
-        meetLink: calendarResult.meetLink || '',
-        durationMinutes: DURATION_MINUTES,
-      })
-
-      if (!emailResult.success) {
-        warnings.push(`Email de confirmation du rendez-vous: ${emailResult.error || 'échec inconnu'}`)
-      }
-    } else {
-      warnings.push('Email de confirmation du rendez-vous non envoyé: GOOGLE_APPS_SCRIPT_URL manquant')
-    }
-
-    if (!calendarResult.meetLink) {
-      warnings.push('Événement Google Calendar créé sans lien Google Meet')
-    }
-
-    notifyAppointmentBooked({
-      orderId: orderId || undefined,
+    // Sync to Apps Script for Discord notification (non-blocking)
+    saveAppointmentToSheets({
+      id: record.id,
+      email,
       firstName,
       lastName,
       email,
       dateLabel,
       timeLabel,
       meetLink: calendarResult.meetLink ?? undefined,
-    }).catch((error) => {
-      console.warn('[appointments] Discord notification failed:', error)
-    })
+      eventId: calendarResult.eventId ?? undefined,
+      orderId,
+      createdAt: record.createdAt,
+      dateLabel: formatDateLabel(startDate),
+      timeLabel: `${formatTimeLabel(startDate)} - ${formatTimeLabel(endDate)}`,
+    }).catch((err) => console.warn('[appointments] Apps Script sync failed:', err))
 
     return NextResponse.json({
       success: true,

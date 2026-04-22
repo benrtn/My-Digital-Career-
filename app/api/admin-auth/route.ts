@@ -1,104 +1,76 @@
 import { NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
-import bcrypt from 'bcryptjs'
-import { ADMIN_SESSION_COOKIE, createAdminToken, verifyAdminToken } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
-const adminSessionCookie = {
-  httpOnly: true,
-  sameSite: 'lax' as const,
-  secure: process.env.NODE_ENV === 'production',
-  path: '/',
-  maxAge: 60 * 60 * 12,
+// ---------------------------------------------------------------------------
+// Rate limiting: 5 attempts per IP per 15 minutes
+// ---------------------------------------------------------------------------
+
+const RATE_LIMIT_MAX = 5
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
+
+const rateMap = new Map<string, { count: number; resetAt: number }>()
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  )
 }
 
-// ── Rate limiting (in-memory; best-effort on serverless) ──
-const failedAttempts = new Map<string, { count: number; firstAt: number }>()
-const RATE_WINDOW_MS = 15 * 60 * 1000 // 15 min
-const MAX_ATTEMPTS = 5
-
-function clientKey(request: Request): string {
-  const fwd = request.headers.get('x-forwarded-for')
-  return fwd?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown'
-}
-
-function checkRate(key: string): boolean {
-  const entry = failedAttempts.get(key)
+function checkRateLimit(ip: string): { allowed: boolean; retryAfterMs: number } {
   const now = Date.now()
-  if (!entry || now - entry.firstAt > RATE_WINDOW_MS) {
-    failedAttempts.set(key, { count: 0, firstAt: now })
-    return true
+  const entry = rateMap.get(ip)
+
+  if (!entry || now >= entry.resetAt) {
+    rateMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return { allowed: true, retryAfterMs: 0 }
   }
-  return entry.count < MAX_ATTEMPTS
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, retryAfterMs: entry.resetAt - now }
+  }
+
+  entry.count++
+  return { allowed: true, retryAfterMs: 0 }
 }
 
-function recordFailure(key: string) {
-  const entry = failedAttempts.get(key) ?? { count: 0, firstAt: Date.now() }
-  entry.count += 1
-  failedAttempts.set(key, entry)
-}
+// ---------------------------------------------------------------------------
+// Constant-time string comparison to prevent timing attacks
+// ---------------------------------------------------------------------------
 
-function resetFailures(key: string) {
-  failedAttempts.delete(key)
-}
-
-function timingSafeStringEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a, 'utf8')
-  const bufB = Buffer.from(b, 'utf8')
-  if (bufA.length !== bufB.length) {
-    // Still compare same-length buffers to avoid length-based timing leak.
-    const dummy = Buffer.alloc(bufA.length)
-    timingSafeEqual(bufA, dummy)
+function safeEquals(a: string, b: string): boolean {
+  try {
+    const aBuf = Buffer.from(a)
+    const bBuf = Buffer.from(b)
+    if (aBuf.length !== bBuf.length) {
+      // Still run comparison to avoid timing leak on length
+      timingSafeEqual(aBuf, aBuf)
+      return false
+    }
+    return timingSafeEqual(aBuf, bBuf)
+  } catch {
     return false
   }
-  return timingSafeEqual(bufA, bufB)
 }
 
-function getCookieValue(request: Request, name: string): string | null {
-  const value = request.headers
-    .get('cookie')
-    ?.split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${name}=`))
-    ?.slice(name.length + 1)
-
-  return value ? decodeURIComponent(value) : null
-}
-
-function clearAdminSession(response: NextResponse) {
-  response.cookies.set(ADMIN_SESSION_COOKIE, '', {
-    ...adminSessionCookie,
-    maxAge: 0,
-  })
-}
-
-export async function GET(request: Request) {
-  const token = getCookieValue(request, ADMIN_SESSION_COOKIE)
-  if (!token) {
-    return NextResponse.json({ success: true, authenticated: false })
-  }
-
-  const payload = await verifyAdminToken(token)
-  if (!payload) {
-    const response = NextResponse.json({ success: true, authenticated: false })
-    clearAdminSession(response)
-    return response
-  }
-
-  return NextResponse.json({
-    success: true,
-    authenticated: true,
-    email: payload.sub,
-  })
-}
+// ---------------------------------------------------------------------------
+// Route handler
+// ---------------------------------------------------------------------------
 
 export async function POST(request: Request) {
-  const ip = clientKey(request)
-  if (!checkRate(ip)) {
+  const ip = getClientIp(request)
+  const { allowed, retryAfterMs } = checkRateLimit(ip)
+
+  if (!allowed) {
     return NextResponse.json(
-      { success: false, error: 'Trop de tentatives — réessayez plus tard' },
-      { status: 429 }
+      { success: false, error: 'Too many attempts. Please try again later.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) },
+      }
     )
   }
 
@@ -116,21 +88,17 @@ export async function POST(request: Request) {
       )
     }
 
-    const submittedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
-    const submittedPassword = typeof password === 'string' ? password : ''
+    const emailMatch = safeEquals(
+      (email?.trim() ?? '').toLowerCase(),
+      adminEmail.toLowerCase()
+    )
+    const passwordMatch = safeEquals(password ?? '', adminPassword)
 
-    const emailOk = timingSafeStringEqual(submittedEmail, adminEmail.toLowerCase())
-
-    // Prefer bcrypt hash if provided; fall back to plaintext with timing-safe compare.
-    let passwordOk = false
-    if (adminPasswordHash) {
-      try {
-        passwordOk = await bcrypt.compare(submittedPassword, adminPasswordHash)
-      } catch {
-        passwordOk = false
-      }
-    } else {
-      passwordOk = timingSafeStringEqual(submittedPassword, adminPassword)
+    if (emailMatch && passwordMatch) {
+      return NextResponse.json({
+        success: true,
+        secretKey: adminSecretKey,
+      })
     }
 
     if (emailOk && passwordOk) {

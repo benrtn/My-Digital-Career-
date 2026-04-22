@@ -1,193 +1,147 @@
-/**
- * POST /api/questionnaire
- *
- * Server-side questionnaire submission.
- * - Keeps a single order ID across the whole checkout flow
- * - Writes to Google Sheets using the legacy "Questionnaire" tab schema
- * - Falls back to Apps Script if direct Sheets access is unavailable
- * - Returns explicit errors instead of silent success
- */
-
 import { NextResponse } from 'next/server'
-import {
-  appendQuestionnaireRow,
-  isGoogleSheetsConfigured,
-} from '@/lib/googleSheetsApi'
-import {
-  isAppsScriptConfigured,
-  submitQuestionnaireViaAppsScript,
-} from '@/lib/googleAppsScript.server'
-import { notifyNewQuestionnaire } from '@/lib/discord'
-import { generateOrderId, formatDateFR } from '@/lib/orderUtils'
-import { isValidEmail } from '@/lib/utils'
-import type { QuestionnaireUpload } from '@/types'
 
 export const runtime = 'nodejs'
 
-interface QuestionnairePayload {
-  orderId?: string
-  firstName?: string
-  lastName?: string
-  email?: string
-  profession?: string
-  seekingJob?: string
-  positionsSearched?: string
-  motivation?: string
-  colorPalette?: string
-  siteStyle?: string
-  customRequestEnabled?: string
-  customRequest?: string
-  socialLinks?: Array<{ name: string; url: string }>
-  cvLink?: string
-  photoLink?: string
-  extraLinks?: string[]
-  cvUpload?: QuestionnaireUpload | null
-  photoUpload?: QuestionnaireUpload | null
-  extraUploads?: QuestionnaireUpload[]
-  authorization?: string
+// ---------------------------------------------------------------------------
+// Upload validation constants
+// ---------------------------------------------------------------------------
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+const MAX_EXTRA_FILES = 5
+
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+])
+
+const SAFE_FILENAME_RE = /^[\w\-. ()[\]]{1,200}$/
+const BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/
+
+interface UploadPayload {
+  name?: unknown
+  mimeType?: unknown
+  base64?: unknown
 }
 
-function formatSocialLinks(
-  socialLinks: Array<{ name: string; url: string }> | undefined
-): string {
-  return (socialLinks ?? [])
-    .filter((link) => link.name?.trim() && link.url?.trim())
-    .map((link) => `${link.name.trim()}: ${link.url.trim()}`)
-    .join(', ')
+interface ValidationError {
+  field: string
+  reason: string
 }
+
+function validateUpload(upload: UploadPayload | null | undefined, fieldName: string): ValidationError | null {
+  if (!upload) return null
+
+  const name = typeof upload.name === 'string' ? upload.name.trim() : ''
+  const mimeType = typeof upload.mimeType === 'string' ? upload.mimeType.trim().toLowerCase() : ''
+  const base64 = typeof upload.base64 === 'string' ? upload.base64 : ''
+
+  if (!name) {
+    return { field: fieldName, reason: 'Missing filename' }
+  }
+
+  if (!SAFE_FILENAME_RE.test(name)) {
+    return { field: fieldName, reason: `Unsafe filename: ${name}` }
+  }
+
+  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+    return { field: fieldName, reason: `Unsupported file type: ${mimeType}` }
+  }
+
+  if (!BASE64_RE.test(base64)) {
+    return { field: fieldName, reason: 'Invalid base64 data' }
+  }
+
+  // Approximate decoded size: base64 length * 3/4
+  const approxBytes = Math.floor((base64.length * 3) / 4)
+  if (approxBytes > MAX_FILE_SIZE_BYTES) {
+    return { field: fieldName, reason: `File too large (max ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB)` }
+  }
+
+  return null
+}
+
+// ---------------------------------------------------------------------------
+// Route handler — validates uploads then proxies to Apps Script
+// ---------------------------------------------------------------------------
 
 export async function POST(request: Request) {
+  let body: Record<string, unknown>
+
   try {
-    const body = (await request.json()) as QuestionnairePayload
+    body = await request.json() as Record<string, unknown>
+  } catch {
+    return NextResponse.json(
+      { success: false, error: 'Invalid JSON body' },
+      { status: 400 }
+    )
+  }
 
-    const firstName = body.firstName?.trim() || ''
-    const lastName = body.lastName?.trim() || ''
-    const email = body.email?.trim().toLowerCase() || ''
+  const errors: ValidationError[] = []
 
-    if (!firstName || !lastName || !email) {
-      return NextResponse.json(
-        { success: false, error: 'Nom, prénom et email requis' },
-        { status: 400 }
-      )
-    }
+  // Validate single uploads
+  for (const field of ['cvUpload', 'photoUpload'] as const) {
+    const err = validateUpload(body[field] as UploadPayload | null, field)
+    if (err) errors.push(err)
+  }
 
-    if (!isValidEmail(email)) {
-      return NextResponse.json(
-        { success: false, error: 'Email invalide' },
-        { status: 400 }
-      )
-    }
-
-    const orderId = body.orderId?.trim() || generateOrderId()
-    const dateLabel = formatDateFR()
-    const socialLinks = formatSocialLinks(body.socialLinks)
-    const extraLinks = (body.extraLinks ?? []).filter((value) => value?.trim()).join(', ')
-    const customRequest =
-      body.customRequestEnabled === 'Oui'
-        ? body.customRequest?.trim() || 'Oui'
-        : 'Non'
-    const authorization = body.authorization?.trim() || 'Non'
-
-    let storage: 'google-sheets' | 'apps-script' | null = null
-    let writeError = ''
-
-    if (isGoogleSheetsConfigured()) {
-      const directWriteOk = await appendQuestionnaireRow({
-        date: dateLabel,
-        orderId,
-        lastName,
-        firstName,
-        email,
-        profession: body.profession?.trim() || '',
-        seekingJob: body.seekingJob?.trim() || '',
-        positionsSearched: body.positionsSearched?.trim() || '',
-        motivation: body.motivation?.trim() || '',
-        customRequest,
-        colorPalette: body.colorPalette?.trim() || '',
-        siteStyle: body.siteStyle?.trim() || '',
-        socialLinks,
-        cvLabel: body.cvLink?.trim() || '',
-        photoLabel: body.photoLink?.trim() || '',
-        extraLabel: extraLinks,
-        authorization,
-        cvUrl: body.cvLink?.trim() || '',
-        photoUrl: body.photoLink?.trim() || '',
-        extraUrl: extraLinks,
-      })
-
-      if (directWriteOk) {
-        storage = 'google-sheets'
-      } else {
-        writeError = 'Écriture directe Google Sheets échouée'
-        console.error('[questionnaire] Direct Google Sheets write failed')
+  // Validate extra uploads array
+  const extraUploads = body['extraUploads']
+  if (extraUploads !== undefined && extraUploads !== null) {
+    if (!Array.isArray(extraUploads)) {
+      errors.push({ field: 'extraUploads', reason: 'Must be an array' })
+    } else {
+      if (extraUploads.length > MAX_EXTRA_FILES) {
+        errors.push({ field: 'extraUploads', reason: `Too many files (max ${MAX_EXTRA_FILES})` })
       }
-    }
-
-    if (!storage && isAppsScriptConfigured()) {
-      const fallbackResult = await submitQuestionnaireViaAppsScript({
-        orderId,
-        date: new Date().toISOString(),
-        firstName,
-        lastName,
-        email,
-        password: '',
-        profession: body.profession?.trim() || '',
-        seekingJob: body.seekingJob?.trim() || '',
-        positionsSearched: body.positionsSearched?.trim() || '',
-        motivations: body.motivation?.trim() || '',
-        motivationOther: '',
-        colorPalette: body.colorPalette?.trim() || '',
-        siteStyle: body.siteStyle?.trim() || '',
-        customRequestEnabled: body.customRequestEnabled?.trim() || '',
-        customRequest,
-        socialLinks,
-        cvFile: body.cvLink?.trim() || '',
-        photoFile: body.photoLink?.trim() || '',
-        extraFile: extraLinks,
-        cvUpload: body.cvUpload ?? null,
-        photoUpload: body.photoUpload ?? null,
-        extraUploads: body.extraUploads ?? [],
-        authorization,
+      extraUploads.forEach((upload, i) => {
+        const err = validateUpload(upload as UploadPayload, `extraUploads[${i}]`)
+        if (err) errors.push(err)
       })
-
-      if (fallbackResult.success) {
-        storage = 'apps-script'
-      } else {
-        writeError = fallbackResult.error || writeError || 'Fallback Apps Script failed'
-        console.error('[questionnaire] Apps Script fallback failed:', fallbackResult.error)
-      }
     }
+  }
 
-    if (!storage) {
-      const configurationError =
-        writeError ||
-        'Google Sheets non configuré. Vérifiez GOOGLE_SERVICE_ACCOUNT_JSON, GOOGLE_SPREADSHEET_ID et/ou GOOGLE_APPS_SCRIPT_URL.'
+  if (errors.length > 0) {
+    console.warn('[questionnaire] Upload validation failed:', errors)
+    return NextResponse.json(
+      { success: false, error: 'Upload validation failed', details: errors },
+      { status: 422 }
+    )
+  }
 
-      return NextResponse.json(
-        { success: false, error: configurationError },
-        { status: writeError ? 502 : 503 }
-      )
-    }
+  // Forward to Apps Script
+  const endpoint = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL
 
-    notifyNewQuestionnaire({
-      orderId,
-      firstName,
-      lastName,
-      email,
-      profession: body.profession?.trim() || '',
-      colorPalette: body.colorPalette?.trim() || '',
-      siteStyle: body.siteStyle?.trim() || '',
-    }).catch((error) => {
-      console.warn('[questionnaire] Discord notification failed:', error)
+  if (!endpoint) {
+    // Mock mode
+    console.info('[questionnaire] Mock mode — Apps Script URL not configured')
+    return NextResponse.json({ success: true, ok: true, mock: true })
+  }
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'submitQuestionnaire', ...body }),
     })
 
-    return NextResponse.json({
-      success: true,
-      orderId,
-      storage,
-    })
-  } catch (error) {
-    console.error('[questionnaire] POST failed:', error)
+    if (!res.ok) {
+      const text = await res.text()
+      console.error('[questionnaire] Apps Script error:', res.status, text)
+      return NextResponse.json(
+        { success: false, error: 'Upstream error' },
+        { status: 502 }
+      )
+    }
+
+    const json = await res.json()
+    return NextResponse.json({ success: true, ...json })
+  } catch (err) {
+    console.error('[questionnaire] Proxy failed:', err)
     return NextResponse.json(
       { success: false, error: 'Questionnaire submission failed' },
       { status: 500 }

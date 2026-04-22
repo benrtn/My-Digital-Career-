@@ -26,58 +26,60 @@ import { isValidEmail } from '@/lib/utils'
 
 export const runtime = 'nodejs'
 
-const CLIENT_METADATA_DIR = path.join(process.cwd(), 'data', 'client-downloads')
+const CLIENT_DOWNLOADS_DIR = path.join(process.cwd(), 'uploads', 'client-downloads')
 
-const clientSessionCookie = {
-  httpOnly: true,
-  sameSite: 'lax' as const,
-  secure: process.env.NODE_ENV === 'production',
-  path: '/',
-  maxAge: 60 * 60 * 24 * 7,
+// ---------------------------------------------------------------------------
+// Rate limiting: 10 attempts per IP per 15 minutes
+// ---------------------------------------------------------------------------
+
+const RATE_LIMIT_MAX = 10
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
+
+const rateMap = new Map<string, { count: number; resetAt: number }>()
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  )
 }
 
-function clearClientSession(response: NextResponse) {
-  response.cookies.set(CLIENT_SESSION_COOKIE, '', {
-    ...clientSessionCookie,
-    maxAge: 0,
-  })
-}
+function checkRateLimit(ip: string): { allowed: boolean; retryAfterMs: number } {
+  const now = Date.now()
+  const entry = rateMap.get(ip)
 
-export async function GET(request: Request) {
-  const token = request.headers
-    .get('cookie')
-    ?.split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${CLIENT_SESSION_COOKIE}=`))
-    ?.slice(CLIENT_SESSION_COOKIE.length + 1)
-
-  if (!token) {
-    return NextResponse.json({ success: true, authenticated: false })
+  if (!entry || now >= entry.resetAt) {
+    rateMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return { allowed: true, retryAfterMs: 0 }
   }
 
-  const payload = await verifyClientToken(decodeURIComponent(token))
-  if (!payload) {
-    const response = NextResponse.json({ success: true, authenticated: false })
-    clearClientSession(response)
-    return response
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, retryAfterMs: entry.resetAt - now }
   }
 
-  return NextResponse.json({
-    success: true,
-    authenticated: true,
-    account: {
-      id: payload.orderId || payload.sub.split('@')[0],
-      name: payload.name,
-      email: payload.sub,
-      orderId: payload.orderId,
-      siteUrl: '',
-      previewImagePath: '',
-      downloadPath: '',
-    },
-  })
+  entry.count++
+  return { allowed: true, retryAfterMs: 0 }
 }
+
+// ---------------------------------------------------------------------------
+// Route handler
+// ---------------------------------------------------------------------------
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request)
+  const { allowed, retryAfterMs } = checkRateLimit(ip)
+
+  if (!allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Too many attempts. Please try again later.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) },
+      }
+    )
+  }
+
   try {
     const body = (await request.json()) as {
       email?: string
@@ -161,11 +163,13 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE() {
-  const response = NextResponse.json({ success: true })
-  clearClientSession(response)
-  return response
-}
+async function findClientAccount(email: string, password: string) {
+  let entries
+  try {
+    entries = await readdir(CLIENT_DOWNLOADS_DIR, { withFileTypes: true })
+  } catch {
+    return null
+  }
 
 async function findLocalAccount(email: string, password: string) {
   try {
@@ -207,6 +211,21 @@ async function findLocalAccount(email: string, password: string) {
       } catch {
         continue
       }
+
+      if (metadata.email?.trim().toLowerCase() !== email) continue
+      if ((metadata.password ?? '').trim() !== password) continue
+
+      return {
+        id: entry.name,
+        name: `${metadata.firstName ?? ''} ${metadata.lastName ?? ''}`.trim() || entry.name,
+        email,
+        password,
+        siteUrl: '',
+        previewImagePath: '',
+        downloadPath: '',
+      }
+    } catch {
+      continue
     }
   } catch {
     // CLIENT_METADATA_DIR might not exist yet
