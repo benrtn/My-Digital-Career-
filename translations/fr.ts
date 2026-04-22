@@ -223,7 +223,7 @@ export const fr = {
         'Téléchargement : le fichier final est mis à disposition après validation du E-CV par le client dans son espace personnel.',
       ],
       legalTitle: 'Mentions légales',
-      editorLine: 'Éditeur du site : My Digital Career. Adresse : 198 Ratchadaphisek Rd, Huai Khwang, Bangkok 10310. SIRET : je le renseignerai plus tard.',
+      editorLine: 'Éditeur du site : My Digital Career. Adresse : 198 Ratchadaphisek Rd, Huai Khwang, Bangkok 10310. SIRET : (en cours d\'enregistrement).',
       contactLine: 'Contact : {email}',
       hostLine: 'Hébergement : GitHub, Inc., c/o Corporation Service Company, 2710 Gateway Oaks Drive, Suite 150N, Sacramento, CA 95833-3505, États-Unis. Médiateur de la consommation : à compléter avant mise en ligne après adhésion à un médiateur référencé CECMC.',
       dataTitle: 'Données personnelles & cookies',
@@ -419,9 +419,9 @@ export const fr = {
         description: 'Sobriété maximale pour une crédibilité immédiate.',
       },
       r5: {
-        title: 'Benjamin I.',
-        profession: 'Profil Digital',
-        description: 'Présence web claire, moderne et immédiatement partageable.',
+        title: 'Léa T.',
+        profession: 'Cheffe de projet digital',
+        description: 'Une audace maîtrisée pour un profil immédiatement mémorable.',
       },
     },
     quality: {

@@ -32,15 +32,9 @@ export function LanguageSelector({ compact = false }: { compact?: boolean }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={cn(
-          'flex items-center gap-2 rounded-xl transition-all duration-200',
-          'text-neutral-600 hover:text-neutral-900',
-          'hover:bg-neutral-100/70',
-          compact ? 'px-2.5 py-1.5 text-sm' : 'px-3 py-2 text-sm'
-        )}
+        className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm transition-all duration-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100/70"
       >
         <span className="text-base leading-none">{current.flag}</span>
-        {!compact && <span className="font-medium">{current.label}</span>}
         <ChevronDown
           size={14}
           className={cn('transition-transform duration-200', open && 'rotate-180')}
