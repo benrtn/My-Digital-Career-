@@ -29,9 +29,9 @@ export const siteConfig = {
 export function getLocalizedPrice(lang: 'fr' | 'en' | 'th') {
   if (lang === 'th') {
     return {
-      amount: '900',
+      amount: '740',
       currency: '฿',
-      inline: '900฿',
+      inline: '740฿',
     }
   }
 
