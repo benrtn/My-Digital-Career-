@@ -62,8 +62,7 @@ export async function submitQuestionnaire(
   data: QuestionnaireData,
   options?: { orderId?: string }
 ): Promise<ApiResult> {
-  return postApi({
-    action: 'submitQuestionnaire',
+  const payload = {
     orderId: options?.orderId || '',
     firstName: data.firstName,
     lastName: data.lastName,
@@ -106,7 +105,26 @@ export async function submitQuestionnaire(
     })),
     authorization: data.authorization ? 'Oui' : 'Non',
     date: new Date().toISOString(),
-  })
+  }
+
+  // Route through /api/questionnaire for server-side upload validation.
+  // This function is only called from the browser (PaymentBlock), so the
+  // relative URL resolves to the same origin.
+  try {
+    const res = await fetch('/api/questionnaire', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const json = await res.json() as Record<string, unknown>
+    if (!res.ok) {
+      return { success: false, error: (json.error as string) || 'Questionnaire submission failed' }
+    }
+    return { success: true, data: json }
+  } catch (err) {
+    console.error('[GoogleSheets] submitQuestionnaire fetch error:', err)
+    return { success: false, error: String(err) }
+  }
 }
 
 // ─────────────────────────────────────────────────

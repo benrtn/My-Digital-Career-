@@ -6,7 +6,9 @@ import type { AppointmentSelection } from '@/types'
 
 export const runtime = 'nodejs'
 
-const CLIENT_DOWNLOADS_DIR = path.join(process.cwd(), 'public', 'client-downloads')
+// Files live outside /public so they are never served statically.
+// Actual file access goes through /api/client-downloads/file/[...path].
+const CLIENT_DOWNLOADS_DIR = path.join(process.cwd(), 'uploads', 'client-downloads')
 
 export async function GET(request: Request) {
   try {
@@ -93,7 +95,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       folderName,
-      folderPath: `/client-downloads/${folderName}/`,
+      folderPath: `/api/client-downloads/file/${folderName}/`,
       createdAt,
       unlockAt,
       appointment,
@@ -114,7 +116,13 @@ async function findClientFolder({
   email?: string
   folder?: string
 }) {
-  const entries = await readdir(CLIENT_DOWNLOADS_DIR, { withFileTypes: true })
+  let entries
+  try {
+    entries = await readdir(CLIENT_DOWNLOADS_DIR, { withFileTypes: true })
+  } catch {
+    // Directory doesn't exist yet
+    return null
+  }
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
@@ -158,14 +166,15 @@ async function findClientFolder({
     const unlockAt = metadata?.unlockAt ?? null
     const remainingMs = unlockAt ? Math.max(new Date(unlockAt).getTime() - Date.now(), 0) : 0
 
+    // Return API URLs — the caller must append auth params before use
     return {
       folderName: entry.name,
       createdAt,
       unlockAt,
       remainingMs,
-      zipUrl: zipFile ? `/client-downloads/${entry.name}/${zipFile}` : null,
-      previewUrl: htmlFile ? `/client-downloads/${entry.name}/${htmlFile}` : null,
-      previewImageUrl: previewImage ? `/client-downloads/${entry.name}/${previewImage}` : null,
+      zipUrl: zipFile ? `/api/client-downloads/file/${entry.name}/${zipFile}` : null,
+      previewUrl: htmlFile ? `/api/client-downloads/file/${entry.name}/${htmlFile}` : null,
+      previewImageUrl: previewImage ? `/api/client-downloads/file/${entry.name}/${previewImage}` : null,
       hasZip: Boolean(zipFile),
       hasPreview: Boolean(htmlFile),
       readyAt: remainingMs === 0,

@@ -233,13 +233,21 @@ export default function MonSitePage() {
     )
   }
 
+  function buildAuthFileUrl(rawUrl: string | null, target: ClientSiteAccess): string | null {
+    if (!rawUrl) return null
+    if (!rawUrl.startsWith('/api/client-downloads/file/')) return rawUrl
+    const u = new URL(rawUrl, window.location.origin)
+    u.searchParams.set('email', target.email)
+    u.searchParams.set('password', target.password)
+    return u.toString()
+  }
+
   function triggerDownload(target: ClientSiteAccess) {
-    const dynamicDownloadPath = folderStatus?.found ? folderStatus.zipUrl : null
+    const rawUrl = folderStatus?.found ? folderStatus.zipUrl : null
+    const href = buildAuthFileUrl(rawUrl, target) || target.downloadPath
     const link = document.createElement('a')
-    link.href = dynamicDownloadPath || target.downloadPath
-    link.download = dynamicDownloadPath
-      ? getDownloadFileName(dynamicDownloadPath)
-      : `${target.id}-site.zip`
+    link.href = href
+    link.download = rawUrl ? getDownloadFileName(rawUrl) : `${target.id}-site.zip`
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -339,8 +347,12 @@ export default function MonSitePage() {
 
   const remainingMs = getRemainingMs(folderStatus, now)
   const previewReady = isPreviewReady(folderStatus, account)
-  const previewUrl = getPreviewUrl(folderStatus, account)
-  const previewImage = folderStatus?.previewImageUrl || account?.previewImagePath || '/creation/siteazzeddine.webp'
+  const previewUrl = account
+    ? (buildAuthFileUrl(folderStatus?.previewUrl ?? null, account) || account.siteUrl)
+    : ''
+  const previewImage = account
+    ? (buildAuthFileUrl(folderStatus?.previewImageUrl ?? null, account) || account.previewImagePath || '/creation/siteazzeddine.webp')
+    : '/creation/siteazzeddine.webp'
   const downloadReady = folderStatus?.found ? Boolean(folderStatus.zipUrl) : Boolean(account?.downloadPath)
   const canApprove = previewReady
   const canOpenChat = chatEligible && previewReady

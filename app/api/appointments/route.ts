@@ -1,34 +1,21 @@
 import { NextResponse } from 'next/server'
-import { mkdir, readFile, writeFile } from 'fs/promises'
-import path from 'path'
 import {
   getGoogleCalendarBusySlots,
   createCalendarEvent,
 } from '@/lib/googleCalendar'
 import { saveAppointmentToSheets } from '@/lib/googleSheets'
+import {
+  readAppointmentsFromSheets,
+  appendAppointmentToSheets,
+} from '@/lib/sheetsApi'
+import type { SheetAppointmentRecord } from '@/lib/sheetsApi'
 
 export const runtime = 'nodejs'
 
-const STORAGE_DIR = path.join(process.cwd(), 'data')
-const STORAGE_PATH = path.join(STORAGE_DIR, 'appointments.json')
 const DAYS_AHEAD = 10
 const DURATION_MINUTES = 60
 const BUSINESS_HOURS = { start: 7, end: 22 } // Europe/Paris wall-clock hours
 const TIMEZONE = 'Europe/Paris'
-
-type AppointmentRecord = {
-  id: string
-  email: string
-  firstName: string
-  lastName: string
-  startAt: string   // ISO UTC
-  endAt: string     // ISO UTC
-  durationMinutes: number
-  mode: 'google_meet'
-  meetLink?: string
-  eventId?: string
-  createdAt: string // ISO UTC
-}
 
 // ---------------------------------------------------------------------------
 // Timezone helpers
@@ -79,24 +66,6 @@ function formatTimeLabel(date: Date): string {
 }
 
 // ---------------------------------------------------------------------------
-// Storage helpers
-// ---------------------------------------------------------------------------
-
-async function readAppointments(): Promise<AppointmentRecord[]> {
-  try {
-    const raw = await readFile(STORAGE_PATH, 'utf8')
-    return JSON.parse(raw) as AppointmentRecord[]
-  } catch {
-    return []
-  }
-}
-
-async function writeAppointments(appointments: AppointmentRecord[]): Promise<void> {
-  await mkdir(STORAGE_DIR, { recursive: true })
-  await writeFile(STORAGE_PATH, JSON.stringify(appointments, null, 2), 'utf8')
-}
-
-// ---------------------------------------------------------------------------
 // Overlap check
 // ---------------------------------------------------------------------------
 
@@ -105,10 +74,10 @@ function overlaps(startA: Date, endA: Date, startB: Date, endB: Date): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Slot generation — uses real Google Calendar busy slots
+// Slot generation — uses Sheets appointments + Google Calendar busy slots
 // ---------------------------------------------------------------------------
 
-async function buildSlots(appointments: AppointmentRecord[]) {
+async function buildSlots(appointments: SheetAppointmentRecord[]) {
   const now = new Date()
   const minBookingTime = now.getTime() + 24 * 60 * 60 * 1000
 
@@ -117,7 +86,6 @@ async function buildSlots(appointments: AppointmentRecord[]) {
   const windowEndParts = getParisDate(new Date(now.getTime() + DAYS_AHEAD * 86400000))
   const windowEnd = parisTimeToUTC(windowEndParts.year, windowEndParts.month, windowEndParts.day, BUSINESS_HOURS.end)
 
-  // Fetch real Google Calendar busy slots
   const googleBusyRaw = await getGoogleCalendarBusySlots(windowStart, windowEnd)
   const googleBusy = googleBusyRaw.map((b) => ({
     start: new Date(b.start),
@@ -175,7 +143,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')?.trim().toLowerCase()
-    const appointments = await readAppointments()
+    const appointments = await readAppointmentsFromSheets()
 
     if (email) {
       const appointment = appointments
@@ -242,14 +210,12 @@ export async function POST(request: Request) {
     }
 
     const endDate = new Date(startDate.getTime() + DURATION_MINUTES * 60 * 1000)
-    const appointments = await readAppointments()
+    const appointments = await readAppointmentsFromSheets()
 
-    // Check against existing appointments
     const conflictsWithAppointment = appointments.some((item) =>
       overlaps(startDate, endDate, new Date(item.startAt), new Date(item.endAt))
     )
 
-    // Check against real Google Calendar
     const googleBusyRaw = await getGoogleCalendarBusySlots(startDate, endDate)
     const conflictsWithGoogle = googleBusyRaw.some((busy) =>
       overlaps(startDate, endDate, new Date(busy.start), new Date(busy.end))
@@ -262,7 +228,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create real Google Calendar event with Google Meet link
     const clientName = `${firstName} ${lastName}`.trim()
     const calendarResult = await createCalendarEvent({
       summary: `My Digital Career — RDV ${clientName}`,
@@ -277,7 +242,7 @@ export async function POST(request: Request) {
       attendeeEmail: email,
     })
 
-    const record: AppointmentRecord = {
+    const record: SheetAppointmentRecord & { orderId: string } = {
       id: `rdv-${Date.now()}`,
       email,
       firstName,
@@ -289,12 +254,13 @@ export async function POST(request: Request) {
       meetLink: calendarResult.meetLink ?? undefined,
       eventId: calendarResult.eventId ?? undefined,
       createdAt: new Date().toISOString(),
+      orderId,
     }
 
-    appointments.push(record)
-    await writeAppointments(appointments)
+    // Write to Google Sheets (primary store)
+    await appendAppointmentToSheets(record)
 
-    // Sync to Google Sheets (non-blocking)
+    // Sync to Apps Script for Discord notification (non-blocking)
     saveAppointmentToSheets({
       id: record.id,
       email,
@@ -310,7 +276,7 @@ export async function POST(request: Request) {
       createdAt: record.createdAt,
       dateLabel: formatDateLabel(startDate),
       timeLabel: `${formatTimeLabel(startDate)} - ${formatTimeLabel(endDate)}`,
-    }).catch((err) => console.warn('[appointments] Sheets sync failed:', err))
+    }).catch((err) => console.warn('[appointments] Apps Script sync failed:', err))
 
     return NextResponse.json({
       success: true,

@@ -382,6 +382,16 @@ export default function AdminPage() {
       (q.orderId || '').toLowerCase().includes(search.toLowerCase())
   )
 
+  // Appends adminKey to /api/client-downloads/file/... URLs so the secure
+  // file-serving route accepts the request.
+  function buildAdminFileUrl(url: string | null): string | null {
+    if (!url) return null
+    if (!url.startsWith('/api/client-downloads/file/')) return url
+    const u = new URL(url, window.location.origin)
+    u.searchParams.set('adminKey', adminKey)
+    return u.toString()
+  }
+
   // ── Monthly stats for mini chart ──
   const monthlyOrders = useMemo(() => {
     const now = new Date()
@@ -801,15 +811,15 @@ export default function AdminPage() {
                                 </a>
                               )}
 
-                              {folder?.previewUrl && (
-                                <a href={folder.previewUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-400 hover:underline">
+                              {folder?.previewUrl && buildAdminFileUrl(folder.previewUrl) && (
+                                <a href={buildAdminFileUrl(folder.previewUrl)!} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-400 hover:underline">
                                   <ExternalLink size={12} />
                                   Apercu
                                 </a>
                               )}
 
-                              {folder?.zipUrl && (
-                                <a href={folder.zipUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-400 hover:underline">
+                              {folder?.zipUrl && buildAdminFileUrl(folder.zipUrl) && (
+                                <a href={buildAdminFileUrl(folder.zipUrl)!} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-400 hover:underline">
                                   <Download size={12} />
                                   ZIP
                                 </a>
@@ -864,8 +874,8 @@ export default function AdminPage() {
                                   {folder.hasPreview && <DarkFlag tone="blue" label="Apercu" />}
                                 </div>
                                 <div className="flex gap-3">
-                                  {folder.previewUrl && <a href={folder.previewUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">Apercu</a>}
-                                  {folder.zipUrl && <a href={folder.zipUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">ZIP</a>}
+                                  {folder.previewUrl && buildAdminFileUrl(folder.previewUrl) && <a href={buildAdminFileUrl(folder.previewUrl)!} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">Apercu</a>}
+                                  {folder.zipUrl && buildAdminFileUrl(folder.zipUrl) && <a href={buildAdminFileUrl(folder.zipUrl)!} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">ZIP</a>}
                                 </div>
                               </div>
                             )}
