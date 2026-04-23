@@ -37,9 +37,12 @@ export function CookieBanner() {
         >
           <div className="space-y-6">
             <div className="space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-                My Digital Career
-              </p>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-neutral-950">
+                  <span className="text-xs font-bold tracking-tight text-white">MDC</span>
+                </div>
+                <span className="font-semibold tracking-tight text-neutral-950">My Digital Career</span>
+              </div>
               <h3 className="text-2xl font-semibold tracking-[-0.03em] text-neutral-950">
                 Votre confidentialite compte
               </h3>
