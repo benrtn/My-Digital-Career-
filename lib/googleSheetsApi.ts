@@ -18,59 +18,45 @@ const ORDER_HEADERS = [
   'Date',
   'Nom',
   'Prénom',
-  'Email',
+  'Adresse mail',
   'Statut',
-  'Montant',
-  'Devise',
-  'Profession',
-  'Poste(s) recherché(s)',
-  'Palette',
-  'Style',
-  'Chat Activé',
-  'Première Version Envoyée',
-  'URL Site',
-  'Payé',
-  'Date du rendez-vous',
-  'Heure du Google Meet',
-  'Lien du google meet',
-  'Event ID',
+  'Payé ?',
+  'Heure du Meet',
+  'Lien Google Meet',
 ] as const
 
 const QUESTIONNAIRE_HEADERS = [
-  'Dates',
   'N° Commande',
+  'Date',
   'Nom',
   'Prénom',
   'Adresse mail',
   'Mot de passe',
-  'Profession / milieu',
-  'Recherche d’emploi',
-  'Poste(s) recherché(s)',
-  'Objectif du E-CV',
-  'Requête particulière',
-  'Palette de couleurs',
+  'Profession',
+  "Recherche d'emploi ?",
+  'Postes recherchés',
+  'Pourquoi un E-CV ?',
+  'Requête',
+  'Palette',
   'Style du site',
-  'Réseaux sociaux',
-  'CV',
-  'Photo',
-  'Éléments supplémentaires',
-  'Autorisation',
-  'Dossier client',
-  'URL Dossier client',
-  'URL CV',
-  'URL Photo',
-  'URL Extra',
+  'Liens',
+  'PJ 1',
+  'PJ 2',
+  'PJ 3',
+  'Veux apparaître sur le site ?',
+  'Question client',
 ] as const
 
 const CLIENT_ID_HEADERS = [
-  'Numéro de commande',
-  'Dates',
+  'N° Commande',
+  'Date',
   'Nom',
   'Prénom',
   'Adresse mail',
   'Mot de passe',
-  'Autorisation',
-  'Cookies acceptés',
+  'Cookies',
+  'Veux apparaître sur le site ?',
+  '🔒 Clé auth',
 ] as const
 
 const COOKIE_HEADERS = [
@@ -451,19 +437,17 @@ export interface OrderRow {
   firstName: string
   email: string
   status: string
-  amount: string
-  currency: string
-  profession: string
-  positionsSearched: string
-  colorPalette: string
-  siteStyle: string
-  chatEnabled?: string
-  firstVersionSent?: string
-  siteUrl?: string
   paid?: string
-  appointmentDate?: string
   meetTime?: string
   meetLink?: string
+  // Legacy fields kept for compatibility but no longer written to Sheets
+  amount?: string
+  currency?: string
+  profession?: string
+  positionsSearched?: string
+  colorPalette?: string
+  siteStyle?: string
+  appointmentDate?: string
   eventId?: string
 }
 
@@ -473,22 +457,11 @@ export async function appendOrderRow(data: OrderRow): Promise<boolean> {
     Date: data.date,
     Nom: data.lastName,
     'Prénom': data.firstName,
-    Email: data.email,
+    'Adresse mail': data.email,
     Statut: data.status,
-    Montant: data.amount,
-    Devise: data.currency,
-    Profession: data.profession,
-    'Poste(s) recherché(s)': data.positionsSearched,
-    Palette: data.colorPalette,
-    Style: data.siteStyle,
-    'Chat Activé': data.chatEnabled ?? 'Non',
-    'Première Version Envoyée': data.firstVersionSent ?? 'Non',
-    'URL Site': data.siteUrl ?? '',
-    'Payé': data.paid ?? 'Non',
-    'Date du rendez-vous': data.appointmentDate ?? '',
-    'Heure du Google Meet': data.meetTime ?? '',
-    'Lien du google meet': data.meetLink ?? '',
-    'Event ID': data.eventId ?? '',
+    'Payé ?': data.paid ?? 'Non',
+    'Heure du Meet': data.meetTime ?? 'En attente',
+    'Lien Google Meet': data.meetLink ?? 'En attente',
   })
 }
 
@@ -497,25 +470,10 @@ export async function updateOrderInSheets(
   updates: Partial<OrderRow>
 ): Promise<boolean> {
   return updateRowByHeaderValue(SHEET_COMMANDES, ORDER_HEADERS, 'N° Commande', orderId, {
-    ...(updates.date !== undefined ? { Date: updates.date } : {}),
-    ...(updates.lastName !== undefined ? { Nom: updates.lastName } : {}),
-    ...(updates.firstName !== undefined ? { 'Prénom': updates.firstName } : {}),
-    ...(updates.email !== undefined ? { Email: updates.email } : {}),
     ...(updates.status !== undefined ? { Statut: updates.status } : {}),
-    ...(updates.amount !== undefined ? { Montant: updates.amount } : {}),
-    ...(updates.currency !== undefined ? { Devise: updates.currency } : {}),
-    ...(updates.profession !== undefined ? { Profession: updates.profession } : {}),
-    ...(updates.positionsSearched !== undefined ? { 'Poste(s) recherché(s)': updates.positionsSearched } : {}),
-    ...(updates.colorPalette !== undefined ? { Palette: updates.colorPalette } : {}),
-    ...(updates.siteStyle !== undefined ? { Style: updates.siteStyle } : {}),
-    ...(updates.chatEnabled !== undefined ? { 'Chat Activé': updates.chatEnabled } : {}),
-    ...(updates.firstVersionSent !== undefined ? { 'Première Version Envoyée': updates.firstVersionSent } : {}),
-    ...(updates.siteUrl !== undefined ? { 'URL Site': updates.siteUrl } : {}),
-    ...(updates.paid !== undefined ? { 'Payé': updates.paid } : {}),
-    ...(updates.appointmentDate !== undefined ? { 'Date du rendez-vous': updates.appointmentDate } : {}),
-    ...(updates.meetTime !== undefined ? { 'Heure du Google Meet': updates.meetTime } : {}),
-    ...(updates.meetLink !== undefined ? { 'Lien du google meet': updates.meetLink } : {}),
-    ...(updates.eventId !== undefined ? { 'Event ID': updates.eventId } : {}),
+    ...(updates.paid !== undefined ? { 'Payé ?': updates.paid } : {}),
+    ...(updates.meetTime !== undefined ? { 'Heure du Meet': updates.meetTime } : {}),
+    ...(updates.meetLink !== undefined ? { 'Lien Google Meet': updates.meetLink } : {}),
   })
 }
 
@@ -531,45 +489,43 @@ export interface QuestionnaireRow {
   positionsSearched: string
   motivation: string
   customRequest: string
+  clientQuestion?: string
   colorPalette: string
   siteStyle: string
   socialLinks: string
-  cvLabel: string
-  photoLabel: string
-  extraLabel: string
-  authorization: string
-  driveFolderName?: string
-  driveFolderUrl?: string
   cvUrl?: string
   photoUrl?: string
   extraUrl?: string
+  authorization: string
+  // Legacy fields kept for compatibility
+  cvLabel?: string
+  photoLabel?: string
+  extraLabel?: string
+  driveFolderName?: string
+  driveFolderUrl?: string
 }
 
 export async function appendQuestionnaireRow(data: QuestionnaireRow): Promise<boolean> {
   return appendMappedRow(SHEET_QUESTIONNAIRE, QUESTIONNAIRE_HEADERS, {
-    Dates: data.date,
     'N° Commande': data.orderId,
+    Date: data.date,
     Nom: data.lastName,
     'Prénom': data.firstName,
     'Adresse mail': data.email,
     'Mot de passe': data.password ?? '',
-    'Profession / milieu': data.profession,
-    'Recherche d’emploi': data.seekingJob,
-    'Poste(s) recherché(s)': data.positionsSearched,
-    'Objectif du E-CV': data.motivation,
-    'Requête particulière': data.customRequest,
-    'Palette de couleurs': data.colorPalette,
+    Profession: data.profession,
+    "Recherche d'emploi ?": data.seekingJob,
+    'Postes recherchés': data.positionsSearched,
+    'Pourquoi un E-CV ?': data.motivation,
+    'Requête': data.customRequest,
+    Palette: data.colorPalette,
     'Style du site': data.siteStyle,
-    'Réseaux sociaux': data.socialLinks,
-    CV: data.cvLabel,
-    Photo: data.photoLabel,
-    'Éléments supplémentaires': data.extraLabel,
-    Autorisation: data.authorization,
-    'Dossier client': data.driveFolderName ?? '',
-    'URL Dossier client': data.driveFolderUrl ?? '',
-    'URL CV': data.cvUrl ?? '',
-    'URL Photo': data.photoUrl ?? '',
-    'URL Extra': data.extraUrl ?? '',
+    Liens: data.socialLinks,
+    'PJ 1': data.cvUrl ?? data.cvLabel ?? '',
+    'PJ 2': data.photoUrl ?? data.photoLabel ?? '',
+    'PJ 3': data.extraUrl ?? data.extraLabel ?? '',
+    'Veux apparaître sur le site ?': data.authorization,
+    'Question client': data.clientQuestion ?? '',
   })
 }
 
@@ -579,6 +535,9 @@ export interface ClientIdRow {
   lastName: string
   firstName: string
   email: string
+  /** Plain-text password shown to admin for account recovery */
+  password: string
+  /** Bcrypt hash used for login verification */
   passwordHash: string
   authorization?: string
   cookiesAccepted?: string
@@ -586,14 +545,15 @@ export interface ClientIdRow {
 
 export async function appendClientIdRow(data: ClientIdRow): Promise<boolean> {
   return appendMappedRow(SHEET_ID_CLIENT, CLIENT_ID_HEADERS, {
-    'Numéro de commande': data.orderId,
-    Dates: data.date,
+    'N° Commande': data.orderId,
+    Date: data.date,
     Nom: data.lastName,
     'Prénom': data.firstName,
     'Adresse mail': data.email,
-    'Mot de passe': data.passwordHash,
-    Autorisation: data.authorization ?? '',
-    'Cookies acceptés': data.cookiesAccepted ?? '',
+    'Mot de passe': data.password,
+    Cookies: data.cookiesAccepted ?? 'Non',
+    'Veux apparaître sur le site ?': data.authorization ?? 'Non',
+    '🔒 Clé auth': data.passwordHash,
   })
 }
 
@@ -602,8 +562,8 @@ export async function updateClientIdConsent(
   updates: { authorization?: string; cookiesAccepted?: string }
 ): Promise<boolean> {
   return updateRowByHeaderValue(SHEET_ID_CLIENT, CLIENT_ID_HEADERS, 'Adresse mail', email, {
-    ...(updates.authorization !== undefined ? { Autorisation: updates.authorization } : {}),
-    ...(updates.cookiesAccepted !== undefined ? { 'Cookies acceptés': updates.cookiesAccepted } : {}),
+    ...(updates.authorization !== undefined ? { 'Veux apparaître sur le site ?': updates.authorization } : {}),
+    ...(updates.cookiesAccepted !== undefined ? { Cookies: updates.cookiesAccepted } : {}),
   })
 }
 
@@ -620,11 +580,11 @@ export async function findClientByEmail(email: string): Promise<{
 
   return {
     rowIndex: match.rowIndex,
-    orderId: getRowValue(match.row, match.headers, 'Numéro de commande'),
+    orderId: getRowValue(match.row, match.headers, 'N° Commande'),
     lastName: getRowValue(match.row, match.headers, 'Nom'),
     firstName: getRowValue(match.row, match.headers, 'Prénom'),
     email: getRowValue(match.row, match.headers, 'Adresse mail'),
-    passwordHash: getRowValue(match.row, match.headers, 'Mot de passe'),
+    passwordHash: getRowValue(match.row, match.headers, '🔒 Clé auth'),
   }
 }
 
@@ -693,17 +653,12 @@ export async function appendAppointmentRow(data: AppointmentSheetRow): Promise<b
 
 export async function updateOrderAppointment(
   orderId: string,
-  appointmentDate: string,
+  _appointmentDate: string,
   meetTime: string,
   meetLink: string,
-  eventId = ''
+  _eventId = ''
 ): Promise<boolean> {
-  return updateOrderInSheets(orderId, {
-    appointmentDate,
-    meetTime,
-    meetLink,
-    eventId,
-  })
+  return updateOrderInSheets(orderId, { meetTime, meetLink })
 }
 
 export async function updateOrderPaymentStatus(
@@ -711,7 +666,10 @@ export async function updateOrderPaymentStatus(
   paid: string,
   status: string
 ): Promise<boolean> {
-  return updateOrderInSheets(orderId, { paid, status })
+  return updateOrderInSheets(orderId, {
+    paid,
+    status,
+  })
 }
 
 export async function getOrderByOrderId(orderId: string): Promise<OrderRow | null> {
@@ -723,22 +681,11 @@ export async function getOrderByOrderId(orderId: string): Promise<OrderRow | nul
     date: getRowValue(match.row, match.headers, 'Date'),
     lastName: getRowValue(match.row, match.headers, 'Nom'),
     firstName: getRowValue(match.row, match.headers, 'Prénom'),
-    email: getRowValue(match.row, match.headers, 'Email'),
+    email: getRowValue(match.row, match.headers, 'Adresse mail'),
     status: getRowValue(match.row, match.headers, 'Statut'),
-    amount: getRowValue(match.row, match.headers, 'Montant'),
-    currency: getRowValue(match.row, match.headers, 'Devise'),
-    profession: getRowValue(match.row, match.headers, 'Profession'),
-    positionsSearched: getRowValue(match.row, match.headers, 'Poste(s) recherché(s)'),
-    colorPalette: getRowValue(match.row, match.headers, 'Palette'),
-    siteStyle: getRowValue(match.row, match.headers, 'Style'),
-    chatEnabled: getRowValue(match.row, match.headers, 'Chat Activé'),
-    firstVersionSent: getRowValue(match.row, match.headers, 'Première Version Envoyée'),
-    siteUrl: getRowValue(match.row, match.headers, 'URL Site'),
-    paid: getRowValue(match.row, match.headers, 'Payé'),
-    appointmentDate: getRowValue(match.row, match.headers, 'Date du rendez-vous'),
-    meetTime: getRowValue(match.row, match.headers, 'Heure du Google Meet'),
-    meetLink: getRowValue(match.row, match.headers, 'Lien du google meet'),
-    eventId: getRowValue(match.row, match.headers, 'Event ID'),
+    paid: getRowValue(match.row, match.headers, 'Payé ?'),
+    meetTime: getRowValue(match.row, match.headers, 'Heure du Meet'),
+    meetLink: getRowValue(match.row, match.headers, 'Lien Google Meet'),
   }
 }
 
@@ -778,4 +725,219 @@ export async function readAppointments(): Promise<Record<string, string>[]> {
 
 export async function readCookieConsents(): Promise<Record<string, string>[]> {
   return rowsToObjects(await readSheet(SHEET_COOKIES))
+}
+
+// ─────────────────────────────────────────────────
+// Sheets formatting — professional styling
+// ─────────────────────────────────────────────────
+
+interface SheetMeta {
+  name: string
+  id: number
+  /** Column index (0-based) to apply Payé conditional formatting */
+  paideColumnIndex?: number
+}
+
+async function getSheetMetas(): Promise<SheetMeta[]> {
+  const sheets = getSheetsClient()
+  if (!sheets) return []
+
+  try {
+    const res = await sheets.spreadsheets.get({
+      spreadsheetId: getSpreadsheetId(),
+      fields: 'sheets.properties(title,sheetId)',
+    })
+
+    return (res.data.sheets ?? []).map((s) => ({
+      name: s.properties?.title ?? '',
+      id: s.properties?.sheetId ?? 0,
+    }))
+  } catch (error) {
+    console.error('[GoogleSheets] getSheetMetas failed:', error)
+    return []
+  }
+}
+
+function rgb(r: number, g: number, b: number) {
+  return { red: r / 255, green: g / 255, blue: b / 255 }
+}
+
+function buildFormattingRequests(sheetId: number, paideColumnIndex?: number) {
+  const reqs: sheets_v4.Schema$Request[] = []
+
+  // Header row: black background, white bold text
+  reqs.push({
+    repeatCell: {
+      range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
+      cell: {
+        userEnteredFormat: {
+          backgroundColor: rgb(16, 16, 16),
+          textFormat: {
+            foregroundColor: { red: 1, green: 1, blue: 1 },
+            bold: true,
+            fontSize: 10,
+            fontFamily: 'Inter',
+          },
+          horizontalAlignment: 'CENTER',
+          verticalAlignment: 'MIDDLE',
+          wrapStrategy: 'WRAP',
+        },
+      },
+      fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy)',
+    },
+  })
+
+  // Freeze header row
+  reqs.push({
+    updateSheetProperties: {
+      properties: { sheetId, gridProperties: { frozenRowCount: 1 } },
+      fields: 'gridProperties.frozenRowCount',
+    },
+  })
+
+  // Banded rows (alternating: white / warm cream #F8F7F4)
+  reqs.push({
+    addBanding: {
+      bandedRange: {
+        bandedRangeId: sheetId * 10 + 1,
+        range: { sheetId, startRowIndex: 1 },
+        rowProperties: {
+          headerColor: rgb(16, 16, 16),
+          firstBandColor: { red: 1, green: 1, blue: 1 },
+          secondBandColor: rgb(248, 247, 244),
+        },
+      },
+    },
+  })
+
+  // Outer border
+  reqs.push({
+    updateBorders: {
+      range: { sheetId, startRowIndex: 0 },
+      innerHorizontal: {
+        style: 'SOLID',
+        color: rgb(224, 221, 213),
+        width: 1,
+      },
+      innerVertical: {
+        style: 'SOLID',
+        color: rgb(224, 221, 213),
+        width: 1,
+      },
+    },
+  })
+
+  // Data rows: normal text style
+  reqs.push({
+    repeatCell: {
+      range: { sheetId, startRowIndex: 1 },
+      cell: {
+        userEnteredFormat: {
+          textFormat: {
+            foregroundColor: rgb(28, 28, 28),
+            fontSize: 10,
+            fontFamily: 'Inter',
+          },
+          verticalAlignment: 'MIDDLE',
+          wrapStrategy: 'WRAP',
+        },
+      },
+      fields: 'userEnteredFormat(textFormat,verticalAlignment,wrapStrategy)',
+    },
+  })
+
+  // Conditional formatting for "Payé ?" column (green/red)
+  if (paideColumnIndex !== undefined) {
+    reqs.push({
+      addConditionalFormatRule: {
+        rule: {
+          ranges: [{ sheetId, startColumnIndex: paideColumnIndex, endColumnIndex: paideColumnIndex + 1, startRowIndex: 1 }],
+          booleanRule: {
+            condition: { type: 'TEXT_EQ', values: [{ userEnteredValue: 'Oui' }] },
+            format: {
+              backgroundColor: rgb(209, 250, 229),
+              textFormat: { foregroundColor: rgb(6, 95, 70), bold: true },
+            },
+          },
+        },
+        index: 0,
+      },
+    })
+
+    reqs.push({
+      addConditionalFormatRule: {
+        rule: {
+          ranges: [{ sheetId, startColumnIndex: paideColumnIndex, endColumnIndex: paideColumnIndex + 1, startRowIndex: 1 }],
+          booleanRule: {
+            condition: { type: 'TEXT_EQ', values: [{ userEnteredValue: 'Non' }] },
+            format: {
+              backgroundColor: rgb(254, 226, 226),
+              textFormat: { foregroundColor: rgb(153, 27, 27), bold: true },
+            },
+          },
+        },
+        index: 1,
+      },
+    })
+  }
+
+  return reqs
+}
+
+export async function applySheetFormatting(): Promise<boolean> {
+  const sheets = getSheetsClient()
+  if (!sheets) return false
+
+  const metas = await getSheetMetas()
+  if (!metas.length) return false
+
+  // Ensure main sheets exist and have headers
+  await ensureHeaders(SHEET_COMMANDES, ORDER_HEADERS)
+  await ensureHeaders(SHEET_QUESTIONNAIRE, QUESTIONNAIRE_HEADERS)
+  await ensureHeaders(SHEET_ID_CLIENT, CLIENT_ID_HEADERS)
+
+  const targets: Array<{ name: string; paideCol?: number }> = [
+    { name: SHEET_COMMANDES, paideCol: 6 },  // "Payé ?" is column G (index 6)
+    { name: SHEET_QUESTIONNAIRE },
+    { name: SHEET_ID_CLIENT },
+  ]
+
+  const requests: sheets_v4.Schema$Request[] = []
+
+  for (const target of targets) {
+    const meta = metas.find((m) => m.name === target.name)
+    if (!meta) continue
+    requests.push(...buildFormattingRequests(meta.id, target.paideCol))
+  }
+
+  if (!requests.length) return true
+
+  try {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: getSpreadsheetId(),
+      requestBody: { requests },
+    })
+    console.info('[GoogleSheets] Formatting applied to', targets.map((t) => t.name).join(', '))
+    return true
+  } catch (error) {
+    console.error('[GoogleSheets] applySheetFormatting failed:', error)
+    return false
+  }
+}
+
+export async function clearSheetData(sheetName: string): Promise<boolean> {
+  const sheets = getSheetsClient()
+  if (!sheets) return false
+
+  try {
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: getSpreadsheetId(),
+      range: `${sheetName}!A2:ZZ`,
+    })
+    console.info(`[GoogleSheets] Cleared data rows in "${sheetName}"`)
+    return true
+  } catch (error) {
+    console.error(`[GoogleSheets] clearSheetData "${sheetName}" failed:`, error)
+    return false
+  }
 }

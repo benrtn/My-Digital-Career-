@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -48,22 +47,6 @@ export function Header() {
         )}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 md:h-18 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="relative w-8 h-8 rounded-xl overflow-hidden shadow-lg group-hover:scale-105 transition-transform duration-200">
-              <Image
-                src="/logo.png"
-                alt="My Digital Career"
-                fill
-                sizes="32px"
-                className="object-cover"
-              />
-            </div>
-            <span className="font-semibold text-neutral-900 tracking-tight text-[15px]">
-              My Digital Career
-            </span>
-          </Link>
-
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (

@@ -127,6 +127,7 @@ const emptyForm = (): QuestionnaireData => ({
   siteStyle: '',
   customRequestEnabled: null,
   customRequest: '',
+  clientQuestion: '',
   socialLinks: [emptySocial()],
   cvLink: '',
   photoLink: '',
@@ -353,12 +354,13 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
     { label: tq.fields.email, value: data.email || '—' },
     { label: 'Mot de passe', value: data.password ? '••••••••' : '—' },
     { label: tq.fields.profession, value: data.profession || '—' },
-    { label: 'Recherche d’emploi', value: data.seekingJob === null ? '—' : data.seekingJob ? 'Oui' : 'Non' },
+    { label: "Recherche d'emploi", value: data.seekingJob === null ? '—' : data.seekingJob ? 'Oui' : 'Non' },
     { label: tq.fields.positions, value: data.seekingJob ? data.positionsSearched.filter(Boolean).join(', ') || '—' : 'Non concerné' },
     { label: 'Objectif du E-CV', value: data.motivations.join(', ') || '—' },
     { label: tq.fields.color, value: COLOR_PALETTES.find((palette) => palette.id === data.colorPalette)?.label || '—' },
     { label: tq.fields.style, value: (tq.styles as Record<string, { name: string }>)[data.siteStyle]?.name || '—' },
     { label: 'Requête particulière', value: data.customRequestEnabled ? data.customRequest || 'Oui' : 'Non' },
+    { label: "Question pour l'équipe", value: data.clientQuestion || '—' },
     { label: tq.fields.socials, value: data.socialLinks.filter((item) => item.url.trim()).map((item) => getSocialSelection(item.name) === 'other' ? getCustomSocialLabel(item.name) || 'Autre' : SOCIAL_OPTIONS.find((option) => option.id === item.name)?.label || item.name).join(', ') || '—' },
     { label: tq.fields.cvLink, value: data.cvLink || '—' },
     { label: tq.fields.photoLink, value: data.photoLink || '—' },
@@ -423,7 +425,7 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
                 <div className="space-y-6">
                   <SectionCard
                     title="Identité du client"
-                    subtitle="On pose une base propre pour la commande, l’espace “Mon site” et la première maquette."
+                    subtitle="On pose une base propre pour la commande, l'espace “Mon site” et la première maquette."
                     icon={<UserRound size={18} />}
                   >
                     <div className="grid gap-4 md:grid-cols-2">
@@ -481,7 +483,7 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
                         />
                       </Field>
 
-                      <Field label="Êtes-vous à la recherche d’un emploi ?" required error={errors.seekingJob}>
+                      <Field label="Êtes-vous à la recherche d'un emploi ?" required error={errors.seekingJob}>
                         <ToggleChoice
                           value={data.seekingJob}
                           onChange={(value) => update('seekingJob', value)}
@@ -534,7 +536,7 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
 
                   <SectionCard
                     title="Objectif du E-CV"
-                    subtitle="Plus tu es clair sur l’intention, plus le rendu sera juste."
+                    subtitle="Plus tu es clair sur l'intention, plus le rendu sera juste."
                     icon={<Briefcase size={18} />}
                   >
                     <Field
@@ -671,7 +673,7 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
 
                   <SectionCard
                     title="Requête particulière"
-                    subtitle="C’est ici que le client peut orienter la création au-delà du cadre standard."
+                    subtitle="C'est ici que le client peut orienter la création au-delà du cadre standard."
                     icon={<CircleHelp size={18} />}
                   >
                     <Field label="Avez-vous une requête particulière concernant votre création de E-CV ?" required error={errors.customRequestEnabled}>
@@ -833,7 +835,7 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
 
                     <Field
                       label={tq.fields.extraLink}
-                      hint={`Si une entreprise n’a pas de logo disponible sur le web, ajoutez-le ici au format “logoNomEntreprise.png”. ${MAX_CHAT_ATTACHMENTS} fichiers max · ${MAX_CHAT_ATTACHMENT_SIZE_MB} MB max par fichier.`}
+                      hint={`Si une entreprise n'a pas de logo disponible sur le web, ajoutez-le ici au format “logoNomEntreprise.png”. ${MAX_CHAT_ATTACHMENTS} fichiers max · ${MAX_CHAT_ATTACHMENT_SIZE_MB} MB max par fichier.`}
                     >
                       <UploadField
                         value={data.extraLink}
@@ -850,7 +852,7 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
                 <div className="space-y-6">
                   <SectionCard
                     title="Récapitulatif final"
-                    subtitle="Vérifiez les informations clés avant validation. Ce récap s’actualise selon les choix effectués."
+                    subtitle="Vérifiez les informations clés avant validation. Ce récap s'actualise selon les choix effectués."
                     icon={<Check size={18} />}
                   >
                     <div className="grid gap-3 md:grid-cols-2">
@@ -864,7 +866,22 @@ export function QuestionnaireModal({ open, onClose, onComplete }: Props) {
                   </SectionCard>
 
                   <SectionCard
-                    title="Autorisation d’affichage"
+                    title="Une question pour l'équipe ?"
+                    subtitle="Facultatif. Posez ici n'importe quelle question avant de valider votre commande."
+                    icon={<CircleHelp size={18} />}
+                  >
+                    <Field label="Votre question (optionnel)">
+                      <textarea
+                        className={cn(inputClass(), 'min-h-[100px] resize-none')}
+                        placeholder="Ex : Est-ce que vous pouvez intégrer une section portfolio ? Quel format de CV est idéal pour mon secteur ?"
+                        value={data.clientQuestion}
+                        onChange={(event) => update('clientQuestion', event.target.value)}
+                      />
+                    </Field>
+                  </SectionCard>
+
+                  <SectionCard
+                    title="Autorisation d'affichage"
                     subtitle="Optionnelle. Si vous refusez, votre E-CV restera confidentiel."
                     icon={<Briefcase size={18} />}
                   >

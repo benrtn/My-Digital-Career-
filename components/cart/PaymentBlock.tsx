@@ -118,6 +118,7 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
                 ? 'Oui'
                 : 'Non',
           customRequest: questionnaireData.customRequest,
+          clientQuestion: questionnaireData.clientQuestion,
           socialLinks: questionnaireData.socialLinks.filter((link) => link.name && link.url),
           cvLink: questionnaireData.cvLink,
           photoLink: questionnaireData.photoLink,

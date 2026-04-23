@@ -96,20 +96,7 @@ export async function POST(request: Request) {
         firstName,
         email,
         status,
-        amount,
-        currency,
-        profession: body.profession?.trim() || '',
-        positionsSearched,
-        colorPalette: body.colorPalette?.trim() || '',
-        siteStyle: body.siteStyle?.trim() || '',
-        chatEnabled: 'Non',
-        firstVersionSent: 'Non',
-        siteUrl: '',
         paid: 'Non',
-        appointmentDate: '',
-        meetTime: '',
-        meetLink: '',
-        eventId: '',
       })
 
       clientSavedDirectly = orderSavedDirectly
@@ -119,6 +106,7 @@ export async function POST(request: Request) {
             lastName,
             firstName,
             email,
+            password,
             passwordHash,
             authorization: body.authorization?.trim() || '',
             cookiesAccepted: body.cookiesAccepted?.trim() || '',

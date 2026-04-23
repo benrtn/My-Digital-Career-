@@ -56,6 +56,7 @@ export interface QuestionnaireData {
   siteStyle: string
   customRequestEnabled: boolean | null
   customRequest: string
+  clientQuestion: string
   socialLinks: SocialLink[]
   cvLink: string
   photoLink: string

@@ -24,12 +24,10 @@ function randomAlphanumeric(length: number): string {
 }
 
 export function formatDateFR(date: Date = new Date()): string {
-  return date.toLocaleString('fr-FR', {
+  return date.toLocaleDateString('fr-FR', {
     day: '2-digit',
     month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    year: '2-digit',
     timeZone: 'Europe/Paris',
   })
 }
