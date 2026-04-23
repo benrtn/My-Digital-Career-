@@ -88,6 +88,12 @@ const APPOINTMENT_HEADERS = [
 
 type HeaderList = readonly string[]
 
+let _lastApiError = ''
+
+export function getLastSheetsError(): string {
+  return _lastApiError
+}
+
 function normalizeHeader(value: string): string {
   return value
     .normalize('NFD')
@@ -224,6 +230,8 @@ async function ensureSheetExists(sheetName: string): Promise<boolean> {
     console.info(`[GoogleSheets] Created missing sheet "${sheetName}"`)
     return true
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    _lastApiError = `ensureSheet("${sheetName}"): ${msg}`
     console.error(`[GoogleSheets] Failed to ensure sheet "${sheetName}":`, error)
     return false
   }
@@ -282,7 +290,10 @@ function buildRow(headers: string[], values: Record<string, string>): string[] {
 
 async function appendRowToSheet(sheetName: string, values: string[]): Promise<boolean> {
   const sheets = getSheetsClient()
-  if (!sheets) return false
+  if (!sheets) {
+    _lastApiError = 'Could not initialize Sheets client (check GOOGLE_SERVICE_ACCOUNT_JSON)'
+    return false
+  }
 
   try {
     await sheets.spreadsheets.values.append({
@@ -298,6 +309,8 @@ async function appendRowToSheet(sheetName: string, values: string[]): Promise<bo
     console.info(`[GoogleSheets] Appended row to "${sheetName}"`)
     return true
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    _lastApiError = `appendRow("${sheetName}"): ${msg}`
     console.error(`[GoogleSheets] Failed to append row to "${sheetName}":`, error)
     return false
   }

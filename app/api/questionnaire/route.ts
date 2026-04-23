@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { appendQuestionnaireRow, isGoogleSheetsConfigured } from '@/lib/googleSheetsApi'
+import { appendQuestionnaireRow, isGoogleSheetsConfigured, getLastSheetsError } from '@/lib/googleSheetsApi'
 import { createClientFolder, uploadFileToDrive, isDriveConfigured } from '@/lib/googleDriveApi'
 import { generateOrderId, formatDateFR } from '@/lib/orderUtils'
 
@@ -200,9 +200,10 @@ export async function POST(request: Request) {
   })
 
   if (!saved) {
-    console.error('[questionnaire] Failed to save to Google Sheets')
+    const sheetsError = getLastSheetsError()
+    console.error('[questionnaire] Failed to save to Google Sheets:', sheetsError)
     return NextResponse.json(
-      { success: false, error: "Impossible d'enregistrer le questionnaire dans Google Sheets." },
+      { success: false, error: sheetsError || "Impossible d'enregistrer le questionnaire dans Google Sheets." },
       { status: 502 }
     )
   }
