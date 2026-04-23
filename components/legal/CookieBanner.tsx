@@ -46,7 +46,7 @@ export function CookieBanner() {
               <h3 className="text-2xl font-semibold tracking-[-0.03em] text-neutral-950">
                 Votre confidentialite compte
               </h3>
-              <p className="text-sm leading-relaxed text-neutral-600">
+              <p className="text-sm leading-relaxed text-neutral-900">
                 Nous utilisons des cookies et technologies similaires pour assurer le bon fonctionnement du site, mesurer l'audience et securiser les paiements. Avec votre accord, certaines donnees de navigation peuvent etre utilisees par des services tels que Google Analytics, Stripe ou PayPal. Vous pouvez accepter, refuser ou personnaliser vos choix a tout moment.
               </p>
             </div>
@@ -91,7 +91,7 @@ function CookiePill({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="rounded-2xl border border-white/80 bg-white px-4 py-3 shadow-[0_18px_40px_-36px_rgba(15,23,42,0.35)]">
       <p className="text-sm font-semibold text-neutral-950">{title}</p>
-      <p className="mt-1 text-xs text-neutral-500">{subtitle}</p>
+      <p className="mt-1 text-xs text-neutral-700">{subtitle}</p>
     </div>
   )
 }
