@@ -1,20 +1,14 @@
 import { NextResponse } from 'next/server'
 import { applySheetFormatting, clearSheetData, isGoogleSheetsConfigured } from '@/lib/googleSheetsApi'
-import { verifyAdminToken } from '@/lib/auth'
-import { cookies } from 'next/headers'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mdc-admin-session')?.value
-  if (!token) {
-    return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 401 })
-  }
+  const authHeader = request.headers.get('x-admin-key') ?? ''
+  const adminKey = process.env.ADMIN_SECRET_KEY ?? ''
 
-  const admin = await verifyAdminToken(token)
-  if (!admin) {
-    return NextResponse.json({ success: false, error: 'Session invalide' }, { status: 401 })
+  if (!adminKey || authHeader !== adminKey) {
+    return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 401 })
   }
 
   if (!isGoogleSheetsConfigured()) {
@@ -22,7 +16,6 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as { clearData?: boolean }
-
   const results: Record<string, boolean> = {}
 
   if (body.clearData) {
