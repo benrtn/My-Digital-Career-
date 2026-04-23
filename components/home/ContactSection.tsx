@@ -44,14 +44,6 @@ export function ContactSection() {
       isLink: false,
     },
     {
-      key: 'snapchat',
-      label: 'Snapchat',
-      iconPath: '/reseaux/snapchat.png',
-      url: socialConfig.snapchat.url,
-      handle: socialConfig.snapchat.handle,
-      isLink: true,
-    },
-    {
       key: 'tiktok',
       label: 'TikTok',
       iconPath: '/reseaux/tiktok.png',
