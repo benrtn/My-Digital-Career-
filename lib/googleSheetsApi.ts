@@ -467,7 +467,7 @@ export interface OrderRow {
 export async function appendOrderRow(data: OrderRow): Promise<boolean> {
   return appendMappedRow(SHEET_COMMANDES, ORDER_HEADERS, {
     'N° Commande': data.orderId,
-    Date: data.date,
+    Dates: data.date,
     Nom: data.lastName,
     'Prénom': data.firstName,
     'Adresse mail': data.email,
@@ -530,7 +530,7 @@ export interface QuestionnaireRow {
 export async function appendQuestionnaireRow(data: QuestionnaireRow): Promise<boolean> {
   return appendMappedRow(SHEET_QUESTIONNAIRE, QUESTIONNAIRE_HEADERS, {
     'N° Commande': data.orderId,
-    Date: data.date,
+    Dates: data.date,
     Nom: data.lastName,
     'Prénom': data.firstName,
     'Adresse mail': data.email,
@@ -568,7 +568,7 @@ export interface ClientIdRow {
 export async function appendClientIdRow(data: ClientIdRow): Promise<boolean> {
   return appendMappedRow(SHEET_ID_CLIENT, CLIENT_ID_HEADERS, {
     'N° Commande': data.orderId,
-    Date: data.date,
+    Dates: data.date,
     Nom: data.lastName,
     'Prénom': data.firstName,
     'Adresse mail': data.email,
@@ -700,14 +700,14 @@ export async function getOrderByOrderId(orderId: string): Promise<OrderRow | nul
 
   return {
     orderId: getRowValue(match.row, match.headers, 'N° Commande'),
-    date: getRowValue(match.row, match.headers, 'Date'),
+    date: getRowValue(match.row, match.headers, 'Dates'),
     lastName: getRowValue(match.row, match.headers, 'Nom'),
     firstName: getRowValue(match.row, match.headers, 'Prénom'),
     email: getRowValue(match.row, match.headers, 'Adresse mail'),
     status: getRowValue(match.row, match.headers, 'Statut'),
     paid: getRowValue(match.row, match.headers, 'Payé ?'),
-    meetTime: getRowValue(match.row, match.headers, 'Heure du Meet'),
-    meetLink: getRowValue(match.row, match.headers, 'Lien Google Meet'),
+    meetTime: getRowValue(match.row, match.headers, 'Heure du meet'),
+    meetLink: getRowValue(match.row, match.headers, 'Lien du google meet'),
   }
 }
 
