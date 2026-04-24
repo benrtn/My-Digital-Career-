@@ -3,11 +3,8 @@ import { Inter, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { CookieConsentProvider } from '@/contexts/CookieConsentContext'
-import { Header } from '@/components/layout/Header'
-import { Footer } from '@/components/layout/Footer'
-import { ChatWidget } from '@/components/chat/ChatWidget'
+import { SiteShell } from '@/components/layout/SiteShell'
 import { ConsentAwareAnalytics } from '@/components/legal/ConsentAwareAnalytics'
-import { CookieBanner } from '@/components/legal/CookieBanner'
 
 const inter = Inter({
   subsets: ['latin', 'latin-ext'],
@@ -50,11 +47,9 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <LanguageProvider>
           <CookieConsentProvider>
-            <Header />
-            <main>{children}</main>
-            <ChatWidget />
-            <Footer />
-            <CookieBanner />
+            <SiteShell>
+              {children}
+            </SiteShell>
             <ConsentAwareAnalytics />
           </CookieConsentProvider>
         </LanguageProvider>

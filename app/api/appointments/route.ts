@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import {
   getGoogleCalendarBusySlots,
   createCalendarEvent,
+  isGoogleCalendarConfigured,
 } from '@/lib/googleCalendar'
 import { saveAppointmentToSheets } from '@/lib/googleSheets'
 import {
@@ -229,18 +230,28 @@ export async function POST(request: Request) {
     }
 
     const clientName = `${firstName} ${lastName}`.trim()
-    const calendarResult = await createCalendarEvent({
-      summary: `My Digital Career — RDV ${clientName}`,
-      description: [
-        `Client : ${clientName}`,
-        `Email : ${email}`,
-        `Durée : ${DURATION_MINUTES} min`,
-        `Réservé via mydigitalcareer.com`,
-      ].join('\n'),
-      startUtc: startDate.toISOString(),
-      endUtc: endDate.toISOString(),
-      attendeeEmail: email,
-    })
+    let calendarResult: { meetLink?: string | null; eventId?: string | null } = {}
+
+    if (isGoogleCalendarConfigured()) {
+      try {
+        calendarResult = await createCalendarEvent({
+          summary: `My Digital Career — RDV ${clientName}`,
+          description: [
+            `Client : ${clientName}`,
+            `Email : ${email}`,
+            `Durée : ${DURATION_MINUTES} min`,
+            `Réservé via mydigitalcareer.com`,
+          ].join('\n'),
+          startUtc: startDate.toISOString(),
+          endUtc: endDate.toISOString(),
+          attendeeEmail: email,
+        })
+      } catch (err) {
+        console.warn('[appointments] Google Calendar event creation failed (non-blocking):', err)
+      }
+    } else {
+      console.info('[appointments] Google Calendar not configured — skipping event creation')
+    }
 
     const record: SheetAppointmentRecord & { orderId: string } = {
       id: `rdv-${Date.now()}`,

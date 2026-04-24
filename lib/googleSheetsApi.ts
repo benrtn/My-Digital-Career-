@@ -15,19 +15,19 @@ const SHEET_APPOINTMENTS = 'Rendez-vous'
 
 const ORDER_HEADERS = [
   'N° Commande',
-  'Date',
+  'Dates',
   'Nom',
   'Prénom',
   'Adresse mail',
   'Statut',
   'Payé ?',
-  'Heure du Meet',
-  'Lien Google Meet',
+  'Heure du meet',
+  'Lien du google meet',
 ] as const
 
 const QUESTIONNAIRE_HEADERS = [
   'N° Commande',
-  'Date',
+  'Dates',
   'Nom',
   'Prénom',
   'Adresse mail',
@@ -49,7 +49,7 @@ const QUESTIONNAIRE_HEADERS = [
 
 const CLIENT_ID_HEADERS = [
   'N° Commande',
-  'Date',
+  'Dates',
   'Nom',
   'Prénom',
   'Adresse mail',
@@ -473,8 +473,8 @@ export async function appendOrderRow(data: OrderRow): Promise<boolean> {
     'Adresse mail': data.email,
     Statut: data.status,
     'Payé ?': data.paid ?? 'Non',
-    'Heure du Meet': data.meetTime ?? 'En attente',
-    'Lien Google Meet': data.meetLink ?? 'En attente',
+    'Heure du meet': data.meetTime ?? 'En attente',
+    'Lien du google meet': data.meetLink ?? 'En attente',
   })
 }
 
@@ -485,9 +485,18 @@ export async function updateOrderInSheets(
   return updateRowByHeaderValue(SHEET_COMMANDES, ORDER_HEADERS, 'N° Commande', orderId, {
     ...(updates.status !== undefined ? { Statut: updates.status } : {}),
     ...(updates.paid !== undefined ? { 'Payé ?': updates.paid } : {}),
-    ...(updates.meetTime !== undefined ? { 'Heure du Meet': updates.meetTime } : {}),
-    ...(updates.meetLink !== undefined ? { 'Lien Google Meet': updates.meetLink } : {}),
+    ...(updates.meetTime !== undefined ? { 'Heure du meet': updates.meetTime } : {}),
+    ...(updates.meetLink !== undefined ? { 'Lien du google meet': updates.meetLink } : {}),
   })
+}
+
+export async function getOrderMeetInfo(orderId: string): Promise<{ meetTime: string; meetLink: string } | null> {
+  const match = await findRowByHeaderValue(SHEET_COMMANDES, ORDER_HEADERS, 'N° Commande', orderId)
+  if (!match) return null
+  return {
+    meetTime: getRowValue(match.row, match.headers, 'Heure du meet'),
+    meetLink: getRowValue(match.row, match.headers, 'Lien du google meet'),
+  }
 }
 
 export interface QuestionnaireRow {
@@ -943,11 +952,12 @@ export async function clearSheetData(sheetName: string): Promise<boolean> {
   if (!sheets) return false
 
   try {
+    // Clear everything including headers so ensureHeaders rewrites them fresh
     await sheets.spreadsheets.values.clear({
       spreadsheetId: getSpreadsheetId(),
-      range: `${sheetName}!A2:ZZ`,
+      range: `${sheetName}!A1:ZZ`,
     })
-    console.info(`[GoogleSheets] Cleared data rows in "${sheetName}"`)
+    console.info(`[GoogleSheets] Cleared all rows in "${sheetName}"`)
     return true
   } catch (error) {
     console.error(`[GoogleSheets] clearSheetData "${sheetName}" failed:`, error)
