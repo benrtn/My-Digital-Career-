@@ -19,6 +19,11 @@ export const fr = {
     floatingCard2: 'Partageable en un clic',
     floatingCard3: 'Design premium',
     scrollHint: 'Découvrir',
+    trustBadges: [
+      { label: 'Premium', value: '100%' },
+      { label: 'Livraison', value: 'En 24h !' },
+      { label: 'Unique', value: 'Adapté' },
+    ],
   },
 
   concept: {

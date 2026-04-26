@@ -152,23 +152,26 @@ export function Hero() {
 
             {/* Trust indicators */}
             <motion.div {...fadeUp(0.45)} className="flex flex-wrap items-stretch justify-center sm:justify-start gap-3 pt-2">
-              {[
-                { value: '100%', label: 'Premium', accent: 'bg-amber-50 border-amber-200/70 text-amber-700' },
-                { value: 'En 24h !', label: 'Livraison', accent: 'bg-emerald-50 border-emerald-200/70 text-emerald-700' },
-                { value: 'Adapté', label: 'Unique', accent: 'bg-blue-50 border-blue-200/70 text-blue-700' },
-              ].map(({ value, label, accent }) => (
-                <div
-                  key={label}
-                  className="min-w-[100px] sm:min-w-[132px] flex-1 sm:flex-none rounded-2xl border border-neutral-200/80 bg-white/80 backdrop-blur-xl px-3 sm:px-5 py-3 sm:py-4 text-center shadow-glass"
-                >
-                  <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${accent}`}>
-                    {label}
-                  </span>
-                  <div className="mt-3 text-xl font-semibold tracking-tight text-neutral-950">
-                    {value}
+              {(t.hero.trustBadges as { label: string; value: string }[]).map(({ value, label }, i) => {
+                const accents = [
+                  'bg-amber-50 border-amber-200/70 text-amber-700',
+                  'bg-emerald-50 border-emerald-200/70 text-emerald-700',
+                  'bg-blue-50 border-blue-200/70 text-blue-700',
+                ]
+                return (
+                  <div
+                    key={i}
+                    className="min-w-[100px] sm:min-w-[132px] flex-1 sm:flex-none rounded-2xl border border-neutral-200/80 bg-white/80 backdrop-blur-xl px-3 sm:px-5 py-3 sm:py-4 text-center shadow-glass"
+                  >
+                    <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${accents[i]}`}>
+                      {label}
+                    </span>
+                    <div className="mt-3 text-xl font-semibold tracking-tight text-neutral-950">
+                      {value}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </motion.div>
           </div>
 

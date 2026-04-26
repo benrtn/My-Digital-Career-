@@ -19,6 +19,11 @@ export const th = {
     floatingCard2: 'แชร์ได้ในคลิกเดียว',
     floatingCard3: 'ดีไซน์พรีเมียม',
     scrollHint: 'สำรวจ',
+    trustBadges: [
+      { label: 'พรีเมียม', value: '100%' },
+      { label: 'จัดส่ง', value: 'ภายใน 24 ชม.!' },
+      { label: 'เฉพาะตัว', value: 'ปรับแต่ง' },
+    ],
   },
 
   concept: {
