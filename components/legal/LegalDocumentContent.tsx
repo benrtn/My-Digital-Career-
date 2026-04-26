@@ -1,6 +1,7 @@
 'use client'
 
 import { siteConfig } from '@/config/site'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export function LegalDocumentContent({
   note,
@@ -11,11 +12,14 @@ export function LegalDocumentContent({
   placeholder: string
   type: 'cgv' | 'legal' | 'privacy'
 }) {
+  const { t } = useLanguage()
+  const m = t.legalDock.modal
+
   return (
     <div className="space-y-6 px-7 py-7 text-sm text-neutral-700 md:px-8">
       <div className="rounded-[1.6rem] border border-amber-200/70 bg-[linear-gradient(135deg,rgba(255,248,228,0.95),rgba(255,255,255,0.88))] p-5 shadow-[0_24px_60px_-48px_rgba(15,23,42,0.45)]">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700/75">
-          Document informatif
+          {m.informativeDoc}
         </p>
         <p className="mt-2 leading-relaxed text-neutral-700">{note}</p>
       </div>
@@ -27,13 +31,12 @@ export function LegalDocumentContent({
       <div className="rounded-[1.6rem] border border-neutral-200/80 bg-white/78 p-5 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.35)]">
         <div className="mb-4 flex items-center justify-between gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
-            Contenu
+            {m.contentLabel}
           </p>
           <span className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-[11px] font-medium text-neutral-500">
-            À compléter
+            {m.toComplete}
           </span>
         </div>
-        {/* Replace the placeholder below with your real legal text content. */}
         <div className="whitespace-pre-wrap rounded-[1.25rem] border border-dashed border-neutral-200 bg-neutral-50/75 p-4 leading-7 text-neutral-700">
           {placeholder}
         </div>
@@ -43,52 +46,58 @@ export function LegalDocumentContent({
 }
 
 function CgvSummary() {
+  const { t } = useLanguage()
+  const f = t.legalDock.modal.cgvFields as Record<string, string>
   return (
     <div className="rounded-[1.6rem] border border-neutral-200/80 bg-white/82 p-5 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.35)]">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Repères contractuels</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">{t.legalDock.modal.cgvSummaryLabel}</p>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <SummaryItem label="Prestation" value={siteConfig.legal.service} />
-        <SummaryItem label="Prix" value={`${siteConfig.price}${siteConfig.currency}`} />
-        <SummaryItem label="Première livraison" value={siteConfig.legal.firstDelivery} />
-        <SummaryItem label="Rendez-vous" value={siteConfig.legal.meetSession} />
-        <SummaryItem label="Version finale" value={siteConfig.legal.finalDelivery} />
-        <SummaryItem label="Retouches" value={siteConfig.legal.freeEdits} />
-        <SummaryItem label="Absence rendez-vous" value={siteConfig.legal.noShowRule} />
-        <SummaryItem label="Réponse" value={siteConfig.legal.responseTime} />
+        <SummaryItem label={f.service} value={siteConfig.legal.service} />
+        <SummaryItem label={f.price} value={`${siteConfig.price}${siteConfig.currency}`} />
+        <SummaryItem label={f.firstDelivery} value={siteConfig.legal.firstDelivery} />
+        <SummaryItem label={f.meet} value={siteConfig.legal.meetSession} />
+        <SummaryItem label={f.finalDelivery} value={siteConfig.legal.finalDelivery} />
+        <SummaryItem label={f.edits} value={siteConfig.legal.freeEdits} />
+        <SummaryItem label={f.noShow} value={siteConfig.legal.noShowRule} />
+        <SummaryItem label={f.response} value={siteConfig.legal.responseTime} />
       </div>
     </div>
   )
 }
 
 function LegalSummary() {
+  const { t } = useLanguage()
+  const f = t.legalDock.modal.legalFields as Record<string, string>
   return (
     <div className="rounded-[1.6rem] border border-neutral-200/80 bg-white/82 p-5 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.35)]">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Informations d’exploitation</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">{t.legalDock.modal.legalSummaryLabel}</p>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <SummaryItem label="Nom commercial" value={siteConfig.name} />
-        <SummaryItem label="Exploitant" value={siteConfig.legal.operator} />
-        <SummaryItem label="Statut" value={siteConfig.legal.businessStatus} />
-        <SummaryItem label="Adresse" value={siteConfig.legal.address} />
-        <SummaryItem label="Email" value={siteConfig.contactEmail} />
-        <SummaryItem label="Hébergeur" value={siteConfig.legal.host} />
-        <SummaryItem label="Domaine" value={siteConfig.legal.domain} />
-        <SummaryItem label="SIRET" value={siteConfig.legal.siret} />
+        <SummaryItem label={f.tradeName} value={siteConfig.name} />
+        <SummaryItem label={f.operator} value={siteConfig.legal.operator} />
+        <SummaryItem label={f.status} value={siteConfig.legal.businessStatus} />
+        <SummaryItem label={f.address} value={siteConfig.legal.address} />
+        <SummaryItem label={f.email} value={siteConfig.contactEmail} />
+        <SummaryItem label={f.host} value={siteConfig.legal.host} />
+        <SummaryItem label={f.domain} value={siteConfig.legal.domain} />
+        <SummaryItem label={f.siret} value={siteConfig.legal.siret} />
       </div>
     </div>
   )
 }
 
 function PrivacySummary() {
+  const { t } = useLanguage()
+  const f = t.legalDock.modal.privacyFields as Record<string, string>
   return (
     <div className="rounded-[1.6rem] border border-neutral-200/80 bg-white/82 p-5 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.35)]">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">Données & outils</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">{t.legalDock.modal.privacySummaryLabel}</p>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <SummaryItem label="Données collectées" value="Nom, prénom, email, téléphone, photo, CV PDF, expériences, diplômes, LinkedIn, texte de présentation, message libre, données de paiement." />
-        <SummaryItem label="Conservation" value={siteConfig.legal.retention} />
-        <SummaryItem label="Revente" value="Aucune revente des données." />
-        <SummaryItem label="Outils externes" value="Google Analytics, Stripe, PayPal." />
-        <SummaryItem label="Espace client" value="Oui" />
-        <SummaryItem label="Newsletter" value="Aucune newsletter." />
+        <SummaryItem label={f.dataCollected} value={f.dataCollectedValue} />
+        <SummaryItem label={f.retention} value={siteConfig.legal.retention} />
+        <SummaryItem label={f.resale} value={f.resaleValue} />
+        <SummaryItem label={f.externalTools} value={f.externalToolsValue} />
+        <SummaryItem label={f.clientArea} value={f.clientAreaValue} />
+        <SummaryItem label={f.newsletter} value={f.newsletterValue} />
       </div>
     </div>
   )

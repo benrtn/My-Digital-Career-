@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { BarChart3, ChevronLeft, Cookie, CreditCard, FileText, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { useCookieConsent } from '@/contexts/CookieConsentContext'
-import { LEGAL_PLACEHOLDERS, cookieContent } from './legalContent'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { LEGAL_PLACEHOLDERS } from './legalContent'
 import { LegalDocumentContent } from './LegalDocumentContent'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +25,9 @@ export function LegalDock({
     openPreferences,
     closePreferences,
   } = useCookieConsent()
+
+  const { t } = useLanguage()
+  const m = t.legalDock.modal
 
   const [activeModal, setActiveModal] = useState<LegalModal>(null)
   const [draftAnalytics, setDraftAnalytics] = useState(preferences.analytics)
@@ -67,77 +71,70 @@ export function LegalDock({
           {variant === 'inline' ? (
             <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2">
               <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-200/75">
-                Cadre légal
+                {t.legalDock.sectionLabel}
               </p>
               <div className="flex flex-wrap gap-2">
                 <LegalButton variant={variant} icon={<SlidersHorizontal size={15} />} onClick={() => openModal('cookies')}>
-                  Gestion des cookies
+                  {t.legalDock.cookies}
                 </LegalButton>
                 <LegalButton variant={variant} icon={<FileText size={15} />} onClick={() => openModal('cgv')}>
-                  CGV
+                  {t.legalDock.cgv}
                 </LegalButton>
                 <LegalButton variant={variant} icon={<ShieldCheck size={15} />} onClick={() => openModal('legal')}>
-                  Mentions légales
+                  {t.legalDock.legal}
                 </LegalButton>
                 <LegalButton variant={variant} icon={<Cookie size={15} />} onClick={() => openModal('privacy')}>
-                  Politique de confidentialité
+                  {t.legalDock.privacy}
                 </LegalButton>
               </div>
             </div>
           ) : (
             <>
               <LegalButton icon={<SlidersHorizontal size={15} />} onClick={() => openModal('cookies')} variant={variant}>
-                Gestion des cookies
+                {t.legalDock.cookies}
               </LegalButton>
               <LegalButton icon={<FileText size={15} />} onClick={() => openModal('cgv')}>
-                CGV
+                {t.legalDock.cgv}
               </LegalButton>
               <LegalButton icon={<ShieldCheck size={15} />} onClick={() => openModal('legal')}>
-                Mentions légales
+                {t.legalDock.legal}
               </LegalButton>
               <LegalButton icon={<Cookie size={15} />} onClick={() => openModal('privacy')}>
-                Politique de confidentialité
+                {t.legalDock.privacy}
               </LegalButton>
             </>
           )}
         </div>
       </div>
 
-      <Modal open={isPreferencesOpen} onClose={closePreferences} title="Gestion des cookies" size="xl">
+      <Modal open={isPreferencesOpen} onClose={closePreferences} title={m.cookiesTitle} size="xl">
         <div className="space-y-6 px-7 py-7 text-sm text-neutral-700 md:px-8">
           <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
             <div className="space-y-5">
               <div className="rounded-[1.6rem] border border-amber-200/70 bg-[linear-gradient(135deg,rgba(255,248,228,0.98),rgba(255,255,255,0.95))] p-5 shadow-[0_24px_60px_-48px_rgba(15,23,42,0.4)]">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700/75">
-                  Confidentialité
+                  {m.privacyLabel}
                 </p>
-                <p className="mt-2 leading-relaxed text-neutral-700">{cookieContent.intro}</p>
+                <p className="mt-2 leading-relaxed text-neutral-700">{m.intro}</p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                <CookieFeatureCard
-                  icon={<ShieldCheck size={18} />}
-                  title="Essentiels"
-                  subtitle="Fonctionnement du site"
-                />
-                <CookieFeatureCard
-                  icon={<BarChart3 size={18} />}
-                  title="Audience"
-                  subtitle="Google Analytics"
-                />
-                <CookieFeatureCard
-                  icon={<CreditCard size={18} />}
-                  title="Paiement"
-                  subtitle="Stripe & PayPal"
-                />
+                {(m.features as { title: string; subtitle: string }[]).map((f, i) => (
+                  <CookieFeatureCard
+                    key={i}
+                    icon={[<ShieldCheck key="s" size={18} />, <BarChart3 key="b" size={18} />, <CreditCard key="c" size={18} />][i]}
+                    title={f.title}
+                    subtitle={f.subtitle}
+                  />
+                ))}
               </div>
 
               <div className="rounded-[1.5rem] border border-neutral-200/80 bg-white/88 p-5 shadow-[0_18px_40px_-36px_rgba(15,23,42,0.24)]">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                  En pratique
+                  {m.inPractice}
                 </p>
                 <div className="mt-4 space-y-3">
-                  {cookieContent.explanation.map((paragraph) => (
+                  {(m.explanation as string[]).map((paragraph) => (
                     <InfoRow key={paragraph} text={paragraph} />
                   ))}
                 </div>
@@ -147,32 +144,24 @@ export function LegalDock({
             <div className="space-y-4">
               <div className="rounded-[1.5rem] border border-neutral-200/80 bg-white/88 p-5 shadow-[0_18px_40px_-36px_rgba(15,23,42,0.24)]">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                  Préférences
+                  {m.preferencesLabel}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-neutral-500">
-                  Les cookies essentiels restent actifs. Vous pouvez autoriser ou refuser les catégories optionnelles ci-dessous.
+                  {m.preferencesDesc}
                 </p>
               </div>
 
               <div className="space-y-3">
-                <ConsentRow
-                  title={cookieContent.categories[0].title}
-                  description={cookieContent.categories[0].description}
-                  checked
-                  disabled
-                />
-                <ConsentRow
-                  title={cookieContent.categories[1].title}
-                  description={cookieContent.categories[1].description}
-                  checked={draftAnalytics}
-                  onChange={() => setDraftAnalytics((value) => !value)}
-                />
-                <ConsentRow
-                  title={cookieContent.categories[2].title}
-                  description={cookieContent.categories[2].description}
-                  checked={draftPayments}
-                  onChange={() => setDraftPayments((value) => !value)}
-                />
+                {(m.categories as { title: string; description: string }[]).map((cat, i) => (
+                  <ConsentRow
+                    key={i}
+                    title={cat.title}
+                    description={cat.description}
+                    checked={i === 0 ? true : i === 1 ? draftAnalytics : draftPayments}
+                    disabled={i === 0}
+                    onChange={i === 0 ? undefined : i === 1 ? () => setDraftAnalytics((v) => !v) : () => setDraftPayments((v) => !v)}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -184,21 +173,21 @@ export function LegalDock({
                 onClick={acceptAll}
                 className="inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-neutral-950 px-5 text-sm font-semibold text-white transition hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-950/20"
               >
-                Tout accepter
+                {m.acceptAll}
               </button>
               <button
                 type="button"
                 onClick={rejectAll}
                 className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:text-neutral-950 focus:outline-none focus:ring-2 focus:ring-neutral-950/10"
               >
-                Tout refuser
+                {m.rejectAll}
               </button>
               <button
                 type="button"
                 onClick={saveDraft}
                 className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-neutral-950 bg-neutral-950/5 px-5 text-sm font-medium text-neutral-950 transition hover:bg-neutral-950 hover:text-white focus:outline-none focus:ring-2 focus:ring-neutral-950/20"
               >
-                Enregistrer mes préférences
+                {m.savePreferences}
               </button>
             </div>
           </div>
@@ -208,23 +197,29 @@ export function LegalDock({
       <LegalTextModal
         open={activeModal === 'cgv'}
         onClose={closeModal}
-        title="CGV"
+        title={t.legalDock.cgv}
         placeholder={LEGAL_PLACEHOLDERS.cgv}
-        note="Remplacez ce placeholder par vos conditions générales de vente complètes."
+        note={m.cgvNote}
+        backLabel={m.back}
+        docType="cgv"
       />
       <LegalTextModal
         open={activeModal === 'legal'}
         onClose={closeModal}
-        title="Mentions légales"
+        title={t.legalDock.legal}
         placeholder={LEGAL_PLACEHOLDERS.legalNotice}
-        note="Remplacez ce placeholder par vos mentions légales complètes."
+        note={m.legalNote}
+        backLabel={m.back}
+        docType="legal"
       />
       <LegalTextModal
         open={activeModal === 'privacy'}
         onClose={closeModal}
-        title="Politique de confidentialité"
+        title={t.legalDock.privacy}
         placeholder={LEGAL_PLACEHOLDERS.privacyPolicy}
-        note="Remplacez ce placeholder par votre politique de confidentialité complète."
+        note={m.privacyNote}
+        backLabel={m.back}
+        docType="privacy"
       />
     </>
   )
@@ -311,12 +306,16 @@ function LegalTextModal({
   title,
   placeholder,
   note,
+  backLabel,
+  docType,
 }: {
   open: boolean
   onClose: () => void
   title: string
   placeholder: string
   note: string
+  backLabel: string
+  docType: 'cgv' | 'legal' | 'privacy'
 }) {
   return (
     <Modal
@@ -325,7 +324,7 @@ function LegalTextModal({
       title={title}
       size="xl"
       headerAction={{
-        label: 'Retour',
+        label: backLabel,
         icon: <ChevronLeft size={18} />,
         onClick: onClose,
       }}
@@ -333,7 +332,7 @@ function LegalTextModal({
       <LegalDocumentContent
         note={note}
         placeholder={placeholder}
-        type={title === 'CGV' ? 'cgv' : title === 'Mentions légales' ? 'legal' : 'privacy'}
+        type={docType}
       />
     </Modal>
   )
