@@ -5,6 +5,7 @@ export const th = {
     mySite: 'เว็บไซต์ของฉัน',
     cart: 'สั่งซื้อ',
     language: 'ภาษา',
+    pro: 'โซลูชันโปร',
   },
 
   hero: {

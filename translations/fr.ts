@@ -5,6 +5,7 @@ export const fr = {
     mySite: 'Mon site',
     cart: 'Commander',
     language: 'Langue',
+    pro: 'Solutions Pro',
   },
 
   hero: {

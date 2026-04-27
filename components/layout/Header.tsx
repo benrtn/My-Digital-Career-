@@ -31,6 +31,7 @@ export function Header() {
     { href: '/', label: t.nav.home },
     { href: '/resultats', label: t.nav.results },
     { href: '/mon-site', label: t.nav.mySite },
+    { href: '/solutions-pro', label: t.nav.pro },
   ]
 
   return (
