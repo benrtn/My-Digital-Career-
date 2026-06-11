@@ -41,7 +41,8 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://www.google-analytics.com https://www.googletagmanager.com",
       // Apps Script: client-side calls from admin / chat / orders go directly to script.google.com
       "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://script.google.com https://script.googleusercontent.com",
-      "frame-src 'self'",
+      // https: needed so the client area can preview delivered e-CVs (Netlify, etc.)
+      "frame-src 'self' https:",
       "font-src 'self' data:",
       "object-src 'none'",
       "base-uri 'self'",
@@ -59,6 +60,16 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   images: {
     remotePatterns: [],
+  },
+  experimental: {
+    // Include committed client deliverables in the serverless bundle so the
+    // download/preview API routes can read them on Vercel (read-only FS).
+    outputFileTracingIncludes: {
+      '/api/client-downloads': ['./uploads/client-downloads/**/*'],
+      '/api/client-downloads/file/[...path]': ['./uploads/client-downloads/**/*'],
+      '/api/client-portal': ['./uploads/client-downloads/**/*'],
+      '/api/client-auth': ['./uploads/client-downloads/**/*'],
+    },
   },
   async headers() {
     return [

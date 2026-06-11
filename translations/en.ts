@@ -11,19 +11,19 @@ export const en = {
   hero: {
     badge: 'New · Professional digital format',
     title: 'Your resume deserves\nmore than a PDF',
-    subtitle: 'Transform your classic CV into a professional, elegant, and memorable website. Shareable via a single link, visible everywhere, at any time.',
+    subtitle: 'Turn your CV into a professional, elegant website shareable via a single link.\nFirst version delivered within 24 hours — you only pay if you approve it.',
     price: '€20',
-    priceSub: 'one-time payment · 24-hour delivery',
-    cta: 'Order my E-CV',
+    priceSub: 'Pay only if you approve your E-CV',
+    cta: 'Create my E-CV',
     ctaSecondary: 'See examples',
     floatingCard1: 'Professional website',
     floatingCard2: 'Shareable in one click',
     floatingCard3: 'Premium design',
     scrollHint: 'Discover',
     trustBadges: [
-      { label: 'Premium', value: '100%' },
-      { label: 'Delivery', value: 'In 24h!' },
-      { label: 'Unique', value: 'Custom' },
+      { label: 'Delivery', value: '24 h' },
+      { label: 'Due today', value: '€0' },
+      { label: 'Free call', value: '30 min' },
     ],
   },
 
@@ -55,24 +55,30 @@ export const en = {
 
   offer: {
     badge: 'Our offer',
-    title: 'Simple, clear,\nexceptional',
-    subtitle: 'One single offer, designed to be perfect.',
+    title: 'Simple, clear,\nrisk-free',
+    subtitle: 'You see your E-CV before paying. €20, only if you approve it.',
     product: 'Custom E-CV',
     price: '20',
     currency: '€',
-    period: 'one-time payment',
+    period: 'one-time payment · only if you approve',
     benefits: [
-      'Custom professional website',
+      'First version delivered within 24 h in your client area',
+      'Free optional 30-minute video call',
       'Premium design tailored to your field',
       'Mobile and desktop optimized',
+      'Adjustments via chat included',
       'Unique shareable link',
       'Social media integration',
-      'Professional photo and identity',
-      'Delivery within 24 hours',
-      'Satisfaction guaranteed',
+      'You only pay to download your E-CV',
     ],
-    cta: 'Order now',
-    reassurance: 'Secure payment · Fast delivery · Dedicated support',
+    hosting: {
+      label: 'Option',
+      title: 'Online hosting',
+      price: '+€5',
+      description: 'We put your E-CV online for you: a permanent link, ready to share, nothing technical to manage.',
+    },
+    cta: 'Start — no payment',
+    reassurance: '€0 at order · First version within 24 h · Dedicated support',
     badge_popular: 'Most popular',
   },
 
@@ -120,16 +126,16 @@ export const en = {
     subtitle: 'A service designed to elevate your professional image at every touchpoint.',
     items: [
       {
-        title: 'Fast delivery',
-        description: 'Your E-CV is ready within 24 hours after receiving your information.',
+        title: 'First version in 24 h',
+        description: 'Your E-CV is ready within 24 hours after we receive your information, directly in your client area.',
+      },
+      {
+        title: 'Pay after approval',
+        description: 'You discover your E-CV before paying. The €20 is only due if you approve it for download.',
       },
       {
         title: 'Premium image',
         description: 'A refined design that reflects your standards and professional seriousness.',
-      },
-      {
-        title: 'Modern design',
-        description: 'Contemporary creations aligned with today\'s visual standards.',
       },
       {
         title: 'One-click sharing',
@@ -149,32 +155,64 @@ export const en = {
   howItWorks: {
     badge: 'How it works',
     title: 'Simple as\nfive steps',
-    subtitle: 'From ordering to delivery, the process is designed to be smooth and frictionless.',
+    subtitle: 'From questionnaire to delivery, everything is designed to be smooth — and you only pay at the end, if you approve.',
     steps: [
       {
         number: '01',
-        title: 'Fill out a questionnaire',
-        description: 'Personalize your E-CV through a few questions. The more precise you are, the better the result.',
+        title: 'Fill out the questionnaire',
+        description: 'About 3 minutes and €0: your info, your style, your colors. The more precise you are, the better the result.',
       },
       {
         number: '02',
-        title: 'Order',
-        description: 'Add the E-CV to your cart and complete the secure payment in a few seconds.',
+        title: 'Book a 30-min video call',
+        description: 'Optional and free: a Google Meet to clarify your needs. You can also book it later from your client area.',
       },
       {
         number: '03',
-        title: 'Receive your E-CV',
-        description: 'Our team creates your E-CV and delivers a first version within 24 hours in the "My Site" section.',
+        title: 'Receive your first version',
+        description: 'Within 24 hours, your E-CV appears in your client area, under "My site". Discover it online, with no commitment.',
       },
       {
         number: '04',
-        title: 'Request changes',
-        description: 'After viewing the first design, you still have 5 change requests available to refine your site.',
+        title: 'Request your adjustments',
+        description: 'Colors, text, photos: request changes via the chat in your client area until the design feels right.',
       },
       {
         number: '05',
-        title: 'Approve and download',
-        description: 'Once your site is approved, the download of your final version starts immediately.',
+        title: 'Approve, pay, download',
+        description: 'Happy with your E-CV? Pay the €20 to download it. Add online hosting (+€5) if you want a permanent link.',
+      },
+    ],
+  },
+
+  faq: {
+    badge: 'Frequently asked questions',
+    title: 'Everything you\nwant to know',
+    subtitle: 'Answers to the questions we hear most often.',
+    items: [
+      {
+        question: 'How much does it cost, and when do I pay?',
+        answer: 'The E-CV costs €20, as a one-time payment. Nothing is due at order: we first create your first version, you discover it in your client area, and you only pay if you decide to approve it and download your E-CV.',
+      },
+      {
+        question: 'What happens after the questionnaire?',
+        answer: 'Your order is created and a client area is opened with your credentials. Within 24 hours, you will find the first version of your E-CV there. You can then request adjustments via chat, and approve it once you are happy.',
+      },
+      {
+        question: 'What is the 30-minute video call for?',
+        answer: 'It is an optional, free Google Meet session to clarify your expectations: style, content, career details. You can book it during your order or later from your client area.',
+      },
+      {
+        question: 'What if I don\'t like the first version?',
+        answer: 'You request changes directly in your client area chat, and we adjust the design. If the result still doesn\'t suit you, you simply pay nothing.',
+      },
+      {
+        question: 'What is the €5 hosting option?',
+        answer: 'For €5 more, we put your E-CV online for you: you get a permanent link, ready to share on LinkedIn, by email or on your paper CV — with no technical work on your side.',
+      },
+      {
+        question: 'What happens to my data and files?',
+        answer: 'Your information is only used to create your E-CV and track your order. It is never sold. You can request deletion at any time by email.',
       },
     ],
   },
@@ -242,8 +280,8 @@ export const en = {
   mySite: {
     badge: 'Client area',
     title: 'Access\nyour site',
-    subtitle: 'Log in with the email address and password provided by My Digital Career to retrieve your personal link.',
-    helper: 'Use the credentials sent with your delivery.',
+    subtitle: 'Log in with the email and password chosen during your order to follow your E-CV: first version, adjustments, approval and download.',
+    helper: 'Use the email and password chosen during your order.',
     connected: 'Connected',
     connectedSub: 'Your access is active on this device.',
     welcome: 'Welcome',
@@ -269,8 +307,9 @@ export const en = {
       fieldPlaceholder: 'Explain here what you would like to adjust on your site...',
       save: 'Send my requests',
       saved: 'Your requests have been saved.',
-      approved: 'Site approved',
-      approvedSub: 'The download of your site has started. You can launch it again below.',
+      approved: 'E-CV approved',
+      approvedSub: 'Congratulations! To receive your file, only the €20 payment remains (+€5 with the hosting option). We will email you the instructions.',
+      approvedPaid: 'The download of your E-CV is available below.',
       downloadAgain: 'Download again',
       chars: 'max characters',
     },
@@ -290,7 +329,7 @@ export const en = {
 
   cart: {
     title: 'Your order',
-    subtitle: 'Before proceeding to payment, complete the personalized questionnaire so we can create an E-CV that perfectly represents you.',
+    subtitle: 'Complete the questionnaire to create your order. No payment today: you only pay if you approve your E-CV.',
     product: 'Custom E-CV',
     quantity: 'Quantity',
     price: 'Price',
@@ -299,9 +338,9 @@ export const en = {
       title: 'Personalized questionnaire',
       subtitle: 'A few details to create your perfect E-CV.',
       cta: 'Fill out the questionnaire',
-      ctaDescription: 'Required before payment · ~3 minutes',
+      ctaDescription: 'Free · ~3 minutes',
       completed: 'Questionnaire completed ✓',
-      completedSub: 'Your information has been saved. You may now proceed to payment.',
+      completedSub: 'Your information has been saved. You may now confirm your order.',
       step: 'Step',
       of: 'of',
       steps: {
@@ -378,13 +417,21 @@ export const en = {
       required: 'Required field',
     },
     payment: {
-      title: 'Order validation',
-      subtitle: 'Demo mode is enabled for testing. This button validates the order without charging any real payment.',
-      total: 'Total to pay',
-      paypalMessage: 'Real payment is not enabled yet. This button only records a test order.',
-      paypalNote: 'Demo mode · No real charge · Local validation',
-      cta: 'Validate a test order',
-      secure: 'Demo mode active · No real payment processed',
+      title: 'Order confirmation',
+      subtitle: 'Your order is free. Payment only happens if you approve your E-CV for download.',
+      total: 'Due today',
+      paypalMessage: 'After confirmation, we create your E-CV and deliver it within 24 h in your client area. You will then decide whether to buy it — or not.',
+      paypalNote: '€0 today · €20 only if you approve',
+      cta: 'Confirm my order — free',
+      secure: 'No payment required today',
+    },
+    hosting: {
+      title: 'Online hosting',
+      price: '+€5',
+      description: 'Your E-CV put online by us, with a permanent link to share. Paid later, together with your E-CV.',
+      add: 'Add option',
+      added: 'Option added ✓',
+      remove: 'Remove',
     },
   },
 
@@ -441,8 +488,8 @@ export const en = {
     },
     cta: {
       title: 'Ready to\nstand out?',
-      subtitle: 'Join the professionals who make a difference with an My Digital Career E-CV.',
-      cta: 'Order my E-CV · €20',
+      subtitle: 'Join the professionals who make a difference with a My Digital Career E-CV. €20, paid only if you approve.',
+      cta: 'Create my E-CV',
     },
   },
 

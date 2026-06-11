@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { readFile, stat } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
+import { readFolderMetadata } from '@/lib/clientDownloads.server'
+import {
+  getAdminSessionFromRequest,
+  getClientSessionFromRequest,
+} from '@/lib/session.server'
 
 export const runtime = 'nodejs'
 
@@ -48,29 +53,29 @@ export async function GET(
     return new NextResponse('Forbidden', { status: 403 })
   }
 
-  // Auth: adminKey OR client email+password
+  // Auth: admin session cookie, adminKey (legacy), or client session cookie
+  // whose email matches the folder owner. No credentials in URLs.
   const { searchParams } = new URL(request.url)
   const adminKey = searchParams.get('adminKey') ?? ''
-  const clientEmail = searchParams.get('email')?.trim().toLowerCase() ?? ''
-  const clientPassword = searchParams.get('password')?.trim() ?? ''
 
-  const isAdmin = adminKey.length > 0 && adminKey === process.env.ADMIN_SECRET_KEY
+  let authorized = adminKey.length > 0 && adminKey === process.env.ADMIN_SECRET_KEY
 
-  let isClient = false
-  if (!isAdmin && clientEmail && clientPassword) {
-    try {
-      const metaPath = path.join(UPLOADS_DIR, folder, 'metadata.json')
-      const raw = await readFile(metaPath, 'utf8')
-      const meta = JSON.parse(raw) as { email?: string; password?: string }
-      isClient =
-        meta.email?.trim().toLowerCase() === clientEmail &&
-        (meta.password ?? '').trim() === clientPassword
-    } catch {
-      isClient = false
+  if (!authorized) {
+    const adminSession = await getAdminSessionFromRequest(request)
+    authorized = Boolean(adminSession)
+  }
+
+  if (!authorized) {
+    const clientSession = await getClientSessionFromRequest(request)
+    if (clientSession) {
+      const meta = await readFolderMetadata(folder)
+      authorized =
+        Boolean(meta?.email) &&
+        meta!.email!.trim().toLowerCase() === clientSession.sub.trim().toLowerCase()
     }
   }
 
-  if (!isAdmin && !isClient) {
+  if (!authorized) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 

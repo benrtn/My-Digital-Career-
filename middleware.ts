@@ -8,8 +8,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// SAMEORIGIN (not DENY): the client area previews the delivered e-CV
+// in an iframe served from this same origin.
 const SECURITY_HEADERS: Record<string, string> = {
-  'X-Frame-Options': 'DENY',
+  'X-Frame-Options': 'SAMEORIGIN',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(self)',

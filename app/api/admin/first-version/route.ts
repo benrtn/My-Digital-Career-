@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sendFirstVersionEmail } from '@/lib/googleSheets'
+import { isGoogleSheetsConfigured, updateOrderInSheets } from '@/lib/googleSheetsApi'
 import { getAdminSessionFromRequest, getRequiredAdminKey } from '@/lib/session.server'
 
 export const runtime = 'nodejs'
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as {
+      orderId?: string
       clientEmail?: string
       clientName?: string
       siteUrl?: string
@@ -22,6 +24,7 @@ export async function POST(request: Request) {
 
     const clientEmail = body.clientEmail?.trim().toLowerCase() || ''
     const clientName = body.clientName?.trim() || ''
+    const orderId = body.orderId?.trim() || ''
 
     if (!clientEmail || !clientName) {
       return NextResponse.json(
@@ -36,6 +39,15 @@ export async function POST(request: Request) {
       clientName,
       siteUrl: body.siteUrl?.trim() || '',
     })
+
+    // Stamp the order so the client area unlocks the preview (best-effort)
+    if (result.success && orderId && isGoogleSheetsConfigured()) {
+      await updateOrderInSheets(orderId, {
+        firstVersionSent: 'Oui',
+        status: 'Première version',
+        ...(body.siteUrl?.trim() ? { siteUrl: body.siteUrl.trim() } : {}),
+      })
+    }
 
     return NextResponse.json(result, {
       status: result.success ? 200 : 502,

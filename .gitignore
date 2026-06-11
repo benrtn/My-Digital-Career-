@@ -33,3 +33,6 @@ npm-debug.log*
 
 # legacy appointments file (migrated to Google Sheets)
 /data/appointments.json
+
+# legacy local data — kept on disk, no longer tracked
+/data/client-downloads/

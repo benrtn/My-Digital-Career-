@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Check, Zap, Shield, Clock } from 'lucide-react'
+import { Check, Zap, Globe, Shield, Clock } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -105,6 +105,26 @@ export function OfferSection() {
                   ))}
                 </ul>
 
+                {/* Hosting option */}
+                <div className="rounded-2xl border border-gold-400/30 bg-gold-400/5 p-4 sm:p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-neutral-950 flex items-center justify-center shrink-0">
+                      <Globe size={16} className="text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <p className="font-semibold text-neutral-900 text-sm tracking-tight">
+                          {t.offer.hosting.title}
+                        </p>
+                        <span className="text-base font-bold text-neutral-950">{t.offer.hosting.price}</span>
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+                        {t.offer.hosting.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* CTA */}
                 <Link href="/panier" className="block">
                   <Button size="xl" className="w-full">
@@ -112,6 +132,7 @@ export function OfferSection() {
                   </Button>
                 </Link>
 
+                <p className="text-center text-xs text-neutral-400">{t.offer.reassurance}</p>
               </div>
             </div>
           </div>
@@ -123,9 +144,9 @@ export function OfferSection() {
           className="mt-16 flex flex-wrap items-center justify-center gap-8 md:gap-12"
         >
           {[
-            { icon: Shield, text: 'Paiement sécurisé' },
-            { icon: Clock, text: 'Livraison en 24 heures' },
-            { icon: Zap, text: 'Support dédié' },
+            { icon: Shield, text: t.offer.reassurance.split('·')[0]?.trim() ?? '' },
+            { icon: Clock, text: t.offer.reassurance.split('·')[1]?.trim() ?? '' },
+            { icon: Zap, text: t.offer.reassurance.split('·')[2]?.trim() ?? '' },
           ].map(({ icon: Icon, text }) => (
             <div key={text} className="flex items-center gap-2 text-neutral-500">
               <Icon size={16} />
@@ -135,7 +156,7 @@ export function OfferSection() {
         </motion.div>
       </div>
 
-      <ScrollCue targetId="contact" />
+      <ScrollCue targetId="benefits" />
     </section>
   )
 }

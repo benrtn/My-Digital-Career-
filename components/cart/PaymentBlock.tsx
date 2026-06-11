@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Info, Lock } from 'lucide-react'
+import { CheckCircle2, Info, ShieldCheck } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Modal } from '@/components/ui/Modal'
-import { getLocalizedPrice } from '@/config/site'
+import { getLocalizedHostingPrice, getLocalizedPrice } from '@/config/site'
 import { buildClientFolderName } from '@/lib/clientDownloads'
 import { LegalDocumentContent } from '@/components/legal/LegalDocumentContent'
 import { LEGAL_PLACEHOLDERS } from '@/components/legal/legalContent'
@@ -16,6 +16,7 @@ interface PaymentBlockProps {
   questionnaireData?: QuestionnaireData | null
   appointment?: AppointmentSelection | null
   skipAppointment?: boolean
+  hosting?: boolean
 }
 
 type JsonResponse = {
@@ -39,10 +40,12 @@ async function readJson(response: Response): Promise<JsonResponse> {
   }
 }
 
-export function PaymentBlock({ questionnaireData, appointment, skipAppointment }: PaymentBlockProps) {
+export function PaymentBlock({ questionnaireData, appointment, skipAppointment, hosting }: PaymentBlockProps) {
   const { t, lang } = useLanguage()
   const tp = t.cart.payment
   const price = getLocalizedPrice(lang)
+  const hostingPrice = getLocalizedHostingPrice(lang)
+  const totalLater = Number(price.amount) + (hosting ? Number(hostingPrice.amount) : 0)
 
   const [orderSent, setOrderSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -81,7 +84,7 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
     !submitting
   )
 
-  const handleDemoOrder = async () => {
+  const handleConfirmOrder = async () => {
     if (!questionnaireData || (!appointment && !skipAppointment) || orderSent || submitting) return
     if (!validateLegalConsents()) return
 
@@ -153,9 +156,10 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
           positionsSearched: questionnaireData.positionsSearched.filter((item) => item.trim()).join(' | '),
           colorPalette: questionnaireData.colorPalette,
           siteStyle: questionnaireData.siteStyle,
-          amount: price.amount,
+          amount: String(totalLater),
           currency: price.currency,
           skipAppointment: Boolean(skipAppointment),
+          hostingOption: Boolean(hosting),
         }),
       })
 
@@ -169,10 +173,6 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
       const finalOrderId = orderResult.orderId || stableOrderId
       if (finalOrderId) {
         setOrderId(finalOrderId)
-      }
-
-      if (orderResult.token) {
-        window.localStorage.setItem('mdc-client-token', orderResult.token)
       }
 
       if (appointment) {
@@ -249,7 +249,7 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
       <div className="relative p-8 space-y-6">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-950">
-            <Lock size={17} className="text-white" />
+            <ShieldCheck size={17} className="text-white" />
           </div>
           <div>
             <h3 className="font-semibold text-neutral-900">{tp.title}</h3>
@@ -264,10 +264,20 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
             <span className="text-neutral-500">{t.cart.product}</span>
             <span className="font-medium">{price.inline}</span>
           </div>
+          {hosting ? (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-neutral-500">{t.cart.hosting.title}</span>
+              <span className="font-medium">{t.cart.hosting.price}</span>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-neutral-500">À payer après validation</span>
+            <span className="font-medium">{totalLater}{price.currency}</span>
+          </div>
           <div className="flex items-center justify-between">
             <span className="font-semibold text-neutral-900">{tp.total}</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-neutral-950">{price.amount}</span>
+              <span className="text-2xl font-bold text-neutral-950">0</span>
               <span className="text-neutral-500">{price.currency}</span>
             </div>
           </div>
@@ -291,10 +301,10 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
                   Cadre juridique
                 </p>
                 <h4 className="text-base font-semibold text-neutral-950">
-                  Validations obligatoires avant paiement
+                  Validations obligatoires avant la création
                 </h4>
                 <p className="text-sm leading-relaxed text-neutral-500">
-                  Ces confirmations sont requises avant de lancer la prestation.
+                  Ces confirmations sont requises avant de lancer la création de votre E-CV.
                 </p>
               </div>
               <button
@@ -329,17 +339,14 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
           </div>
 
           <button
-            onClick={handleDemoOrder}
+            onClick={handleConfirmOrder}
             disabled={!canSubmit}
-            className="relative w-full cursor-pointer overflow-hidden rounded-2xl transition-all hover:-translate-y-0.5 disabled:hover:translate-y-0"
+            className="relative w-full cursor-pointer overflow-hidden rounded-2xl transition-all hover:-translate-y-0.5 disabled:hover:translate-y-0 min-h-[52px]"
           >
             <div className={`absolute inset-0 ${canSubmit ? 'bg-gradient-to-br from-neutral-950 to-neutral-800' : 'bg-gradient-to-br from-neutral-400 to-neutral-300'}`} />
             <div className="relative flex items-center justify-center gap-3 px-6 py-4">
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">
-                Demo
-              </span>
               <span className="text-sm font-semibold text-white">
-                {submitting ? 'Validation en cours...' : tp.cta}
+                {submitting ? 'Création de votre commande...' : tp.cta}
               </span>
             </div>
           </button>
@@ -381,9 +388,9 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
             </div>
           ) : null}
 
-          <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/60 bg-amber-50 p-4">
-            <Info size={15} className="mt-0.5 shrink-0 text-amber-500" />
-            <div className="space-y-1 text-xs leading-relaxed text-amber-700">
+          <div className="flex items-start gap-2.5 rounded-xl border border-blue-200/60 bg-blue-50 p-4">
+            <Info size={15} className="mt-0.5 shrink-0 text-blue-500" />
+            <div className="space-y-1 text-xs leading-relaxed text-blue-700">
               <p>{tp.paypalMessage}</p>
               <p className="font-medium">{tp.paypalNote}</p>
             </div>
@@ -391,7 +398,7 @@ export function PaymentBlock({ questionnaireData, appointment, skipAppointment }
         </div>
 
         <div className="flex items-center justify-center gap-2 pt-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-amber-400" />
+          <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
           <p className="text-xs text-neutral-400">{tp.secure}</p>
         </div>
       </div>

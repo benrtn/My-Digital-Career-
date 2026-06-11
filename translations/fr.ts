@@ -11,19 +11,19 @@ export const fr = {
   hero: {
     badge: 'Nouveau · Format digital professionnel',
     title: 'Votre CV mérite\nmieux qu\'un PDF',
-    subtitle: 'Transformez votre CV classique en un E-CV professionnel, élégant et mémorable.\nPartageable en un lien, visible partout, en tout moment.',
+    subtitle: 'Transformez votre CV en un site web professionnel, élégant et partageable en un lien.\nPremière version livrée sous 24 h — vous ne payez que si vous la validez.',
     price: '20 €',
-    priceSub: '',
-    cta: 'Commander mon E-CV',
+    priceSub: 'Payez uniquement si vous validez votre E-CV',
+    cta: 'Créer mon E-CV',
     ctaSecondary: 'Voir les exemples',
     floatingCard1: 'E-CV professionnel',
     floatingCard2: 'Partageable en un clic',
     floatingCard3: 'Design premium',
     scrollHint: 'Découvrir',
     trustBadges: [
-      { label: 'Premium', value: '100%' },
-      { label: 'Livraison', value: 'En 24h !' },
-      { label: 'Unique', value: 'Adapté' },
+      { label: 'Livraison', value: 'En 24 h' },
+      { label: 'À la commande', value: '0 €' },
+      { label: 'Visio offerte', value: '30 min' },
     ],
   },
 
@@ -55,24 +55,30 @@ export const fr = {
 
   offer: {
     badge: 'Notre offre',
-    title: 'Simple, clair,\nexceptionnel',
-    subtitle: 'Une seule offre, pensée pour être parfaite.',
+    title: 'Simple, clair,\nsans risque',
+    subtitle: 'Vous découvrez votre E-CV avant de payer. 20 €, uniquement si vous le validez.',
     product: 'E-CV Personnalisé',
     price: '20',
     currency: '€',
-    period: 'paiement unique',
+    period: 'paiement unique · seulement si vous validez',
     benefits: [
-      'E-CV professionnel sur mesure',
+      'Première version livrée sous 24 h dans votre espace client',
+      'Visio de 30 minutes offerte (optionnelle)',
       'Design premium adapté à votre métier',
       'Optimisé mobile et desktop',
+      'Ajustements via le chat inclus',
       'Lien partageable unique',
       'Intégration de vos réseaux sociaux',
-      'Photo et identité professionnelle',
-      'Livraison en 24 heures',
-      'Satisfaction garantie',
+      'Vous ne payez que pour télécharger votre E-CV',
     ],
-    cta: 'Commander maintenant',
-    reassurance: 'Paiement sécurisé · Livraison rapide · Support dédié',
+    hosting: {
+      label: 'Option',
+      title: 'Hébergement en ligne',
+      price: '+5 €',
+      description: 'Nous mettons votre E-CV en ligne pour vous : un lien permanent, prêt à partager, sans rien gérer de technique.',
+    },
+    cta: 'Commencer — sans paiement',
+    reassurance: '0 € à la commande · Première version sous 24 h · Support dédié',
     badge_popular: 'Le plus populaire',
   },
 
@@ -120,16 +126,16 @@ export const fr = {
     subtitle: 'Un service pensé pour valoriser votre image professionnelle à chaque interaction.',
     items: [
       {
-        title: 'Livraison rapide',
-        description: 'Votre première version E-CV est prête sous 24 heures après envoie de vos informations.',
+        title: 'Première version en 24 h',
+        description: 'Votre E-CV est prêt sous 24 heures après l\'envoi de vos informations, directement dans votre espace client.',
+      },
+      {
+        title: 'Payez après validation',
+        description: 'Vous découvrez votre E-CV avant de payer. Les 20 € ne sont dus que si vous le validez pour le télécharger.',
       },
       {
         title: 'Image premium',
         description: 'Un design raffiné qui reflète votre niveau d\'exigence et votre sérieux.',
-      },
-      {
-        title: 'Design moderne',
-        description: 'Des créations contemporaines alignées sur les standards visuels actuels.',
       },
       {
         title: 'Partage en 1 clic',
@@ -149,32 +155,64 @@ export const fr = {
   howItWorks: {
     badge: 'Comment ça marche',
     title: 'Simple comme\ncinq étapes',
-    subtitle: 'De la commande à la livraison, le processus est pensé pour être fluide et sans friction.',
+    subtitle: 'Du questionnaire à la livraison, tout est pensé pour être fluide — et vous ne payez qu\'à la fin, si vous validez.',
     steps: [
       {
         number: '01',
-        title: 'Remplissez un questionnaire',
-        description: 'Personnalisez votre E-CV en quelques questions, plus vous êtes précis, plus le rendu sera optimal.',
+        title: 'Remplissez le questionnaire',
+        description: 'Environ 3 minutes et 0 € : vos infos, votre style, vos couleurs. Plus vous êtes précis, plus le rendu sera juste.',
       },
       {
         number: '02',
-        title: 'Commandez et procédez au paiement',
-        description: 'Ajoutez l\'E-CV à votre panier et procédez au paiement sécurisé en quelques secondes.',
+        title: 'Réservez une visio de 30 min',
+        description: 'Optionnel et offert : un échange Google Meet pour préciser votre besoin. Vous pouvez aussi la réserver plus tard depuis votre espace client.',
       },
       {
         number: '03',
-        title: 'Recevez votre\nE-CV',
-        description: 'Notre équipe crée votre E-CV et vous livre une première version sous 24h accessible dans la rubrique "Mon Site".',
+        title: 'Recevez votre première version',
+        description: 'Sous 24 h, votre E-CV apparaît dans votre espace client, rubrique "Mon site". Vous le découvrez en ligne, sans engagement.',
       },
       {
         number: '04',
         title: 'Demandez vos ajustements',
-        description: 'Après découverte du premier design, vous avez la possibilité de demander des modifications dans le chat, rubrique "Mon site" pour affiner votre E-CV.',
+        description: 'Couleurs, textes, photos : demandez vos modifications via le chat de votre espace client jusqu\'à ce que le rendu vous plaise.',
       },
       {
         number: '05',
-        title: 'Validez et téléchargez',
-        description: 'Une fois votre E-CV validé, le téléchargement de votre version finale se lance directement.',
+        title: 'Validez, payez, téléchargez',
+        description: 'Votre E-CV vous plaît ? Réglez les 20 € pour le télécharger. Ajoutez l\'hébergement en ligne (+5 €) si vous voulez un lien permanent.',
+      },
+    ],
+  },
+
+  faq: {
+    badge: 'Questions fréquentes',
+    title: 'Tout ce que vous\nvoulez savoir',
+    subtitle: 'Les réponses aux questions qu\'on nous pose le plus souvent.',
+    items: [
+      {
+        question: 'Combien ça coûte, et quand est-ce que je paie ?',
+        answer: 'L\'E-CV coûte 20 €, en paiement unique. Vous ne payez rien à la commande : nous créons d\'abord votre première version, vous la découvrez dans votre espace client, et vous ne réglez que si vous décidez de la valider pour télécharger votre E-CV.',
+      },
+      {
+        question: 'Que se passe-t-il après le questionnaire ?',
+        answer: 'Votre commande est créée et un espace client est ouvert avec vos identifiants. Sous 24 h, vous y retrouvez la première version de votre E-CV. Vous pouvez ensuite demander des ajustements via le chat, puis valider quand le rendu vous convient.',
+      },
+      {
+        question: 'À quoi sert la visio de 30 minutes ?',
+        answer: 'C\'est un échange optionnel et offert en Google Meet pour préciser vos attentes : style, contenu, détails de votre parcours. Vous pouvez la réserver pendant la commande ou plus tard depuis votre espace client.',
+      },
+      {
+        question: 'Et si la première version ne me plaît pas ?',
+        answer: 'Vous demandez des modifications directement dans le chat de votre espace client, et nous ajustons le design. Si le résultat ne vous convient toujours pas, vous n\'avez tout simplement rien à payer.',
+      },
+      {
+        question: 'Qu\'est-ce que l\'option hébergement à 5 € ?',
+        answer: 'Pour 5 € de plus, nous mettons votre E-CV en ligne à votre place : vous recevez un lien permanent, prêt à partager sur LinkedIn, par email ou sur votre CV papier — sans aucune manipulation technique de votre côté.',
+      },
+      {
+        question: 'Que deviennent mes données et mes fichiers ?',
+        answer: 'Vos informations servent uniquement à créer votre E-CV et à suivre votre commande. Elles ne sont jamais revendues. Vous pouvez demander leur suppression à tout moment par email.',
       },
     ],
   },
@@ -246,8 +284,8 @@ export const fr = {
   mySite: {
     badge: 'Espace client',
     title: 'Accédez à\nvotre E-CV',
-    subtitle: 'Connectez-vous avec l\'adresse email et le mot de passe fournis par My Digital Career pour retrouver votre E-CV personnel.',
-    helper: 'Utilisez les identifiants transmis avec votre livraison.',
+    subtitle: 'Connectez-vous avec l\'email et le mot de passe choisis lors de votre commande pour suivre votre E-CV : première version, ajustements, validation et téléchargement.',
+    helper: 'Utilisez l\'email et le mot de passe choisis lors de votre commande.',
     connected: 'Connecté',
     connectedSub: 'Votre accès est actif sur cet appareil.',
     welcome: 'Bonjour',
@@ -274,7 +312,8 @@ export const fr = {
       save: 'Envoyer mes demandes',
       saved: 'Vos demandes ont bien été enregistrées.',
       approved: 'E-CV validé',
-      approvedSub: 'Le téléchargement de votre E-CV a été lancé. Vous pouvez aussi le relancer ci-dessous.',
+      approvedSub: 'Félicitations ! Pour recevoir votre fichier, il ne reste que le règlement de 20 € (+5 € si option hébergement). Nous vous envoyons les instructions par email.',
+      approvedPaid: 'Le téléchargement de votre E-CV est disponible ci-dessous.',
       downloadAgain: 'Télécharger à nouveau',
       chars: 'caractères max',
     },
@@ -294,7 +333,7 @@ export const fr = {
 
   cart: {
     title: 'Votre commande',
-    subtitle: 'Avant de procéder au paiement, complétez le questionnaire personnalisé afin que nous créions un E-CV parfaitement à votre image.',
+    subtitle: 'Complétez le questionnaire pour créer votre commande. Aucun paiement aujourd\'hui : vous ne réglez que si vous validez votre E-CV.',
     product: 'E-CV Personnalisé',
     quantity: 'Quantité',
     price: 'Prix',
@@ -303,9 +342,9 @@ export const fr = {
       title: 'Questionnaire personnalisé',
       subtitle: 'Quelques informations pour créer votre E-CV parfait.',
       cta: 'Remplir le questionnaire',
-      ctaDescription: 'Requis avant le paiement · ~3 minutes',
+      ctaDescription: 'Gratuit · ~3 minutes',
       completed: 'Questionnaire complété ✓',
-      completedSub: 'Vos informations ont bien été enregistrées. Vous pouvez maintenant procéder au paiement.',
+      completedSub: 'Vos informations ont bien été enregistrées. Vous pouvez maintenant confirmer votre commande.',
       step: 'Étape',
       of: 'sur',
       steps: {
@@ -382,13 +421,21 @@ export const fr = {
       required: 'Champ obligatoire',
     },
     payment: {
-      title: 'Validation de commande',
-      subtitle: 'Mode démo activé pour vos tests. Ce bouton valide la commande sans encaisser de paiement réel.',
-      total: 'Total à payer',
-      paypalMessage: 'Le vrai paiement n’est pas encore activé. Ce bouton sert uniquement à enregistrer une commande de test.',
-      paypalNote: 'Mode démo · Aucun débit réel · Validation locale',
-      cta: 'Valider une commande test',
-      secure: 'Mode démo actif · Aucun paiement réel effectué',
+      title: 'Confirmation de commande',
+      subtitle: 'Votre commande est gratuite. Le paiement n\'interviendra que si vous validez votre E-CV pour le télécharger.',
+      total: 'À payer aujourd\'hui',
+      paypalMessage: 'Après confirmation, nous créons votre E-CV et le livrons sous 24 h dans votre espace client. Vous déciderez ensuite de l\'acheter — ou non.',
+      paypalNote: '0 € aujourd\'hui · 20 € uniquement si vous validez',
+      cta: 'Confirmer ma commande — gratuit',
+      secure: 'Aucun paiement requis aujourd\'hui',
+    },
+    hosting: {
+      title: 'Hébergement en ligne',
+      price: '+5 €',
+      description: 'Votre E-CV mis en ligne par nos soins, avec un lien permanent à partager. Réglé plus tard, en même temps que votre E-CV.',
+      add: 'Ajouter l\'option',
+      added: 'Option ajoutée ✓',
+      remove: 'Retirer',
     },
   },
 
@@ -445,8 +492,8 @@ export const fr = {
     },
     cta: {
       title: 'Prêt à vous\ndémarquer ?',
-      subtitle: 'Rejoignez les professionnels qui font la différence avec un E-CV My Digital Career.',
-      cta: 'Commander mon E-CV · 20 €',
+      subtitle: 'Rejoignez les professionnels qui font la différence avec un E-CV My Digital Career. 20 €, payés uniquement si vous validez.',
+      cta: 'Créer mon E-CV',
     },
   },
 

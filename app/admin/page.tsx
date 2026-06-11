@@ -11,15 +11,9 @@ import {
   FileText, Zap, Activity, Video, Download,
   ClipboardList, Briefcase, Palette, LinkIcon,
 } from 'lucide-react'
-import {
-  getAdminConversations, getAdminOrders, getAdminClients,
-  getAdminQuestionnaires,
-  sendChatMessage, updateOrderStatus, sendFirstVersionEmail,
-} from '@/lib/googleSheets'
 import type { ChatConversation } from '@/types'
 import { cn } from '@/lib/utils'
 
-const ADMIN_SESSION_KEY = 'eworklife-admin-session'
 const POLL_INTERVAL = 15_000
 
 type AdminTab = 'dashboard' | 'orders' | 'clients' | 'questionnaires' | 'appointments' | 'messages'
@@ -32,21 +26,39 @@ interface AdminOrder {
   lastName: string
   email: string
   status: string
+  paid: boolean
+  hosting: boolean
   amount: string
-  currency: string
-  profession: string
-  positionsSearched: string
-  chatEnabled: boolean
+  meetTime: string
+  meetLink: string
+  chatEnabled?: boolean
   firstVersionSent: boolean
   siteUrl: string
 }
 
 interface AdminClient {
+  orderId: string
   date: string
   name: string
   email: string
-  siteUrl: string
-  status: string
+  authorization?: string
+  cookies?: string
+  siteUrl?: string
+  status?: string
+}
+
+interface AdminKpis {
+  totalOrders: number
+  pending: number
+  completed: number
+  revenuePotential: number
+  revenuePaid: number
+  hostingCount: number
+  hostingRate: number
+  visioCount: number
+  last7Days: number
+  questionnaires: number
+  clients: number
 }
 
 interface AdminQuestionnaire {
@@ -60,15 +72,13 @@ interface AdminQuestionnaire {
   positionsSearched: string
   motivations: string
   customRequest: string
+  clientQuestion?: string
   colorPalette: string
   siteStyle: string
   socialLinks: string
-  cv: string
-  photo: string
-  extras: string
   authorization: string
-  driveFolderName: string
-  driveFolderUrl: string
+  driveFolderName?: string
+  driveFolderUrl?: string
   cvUrl: string
   photoUrl: string
   extraUrl: string
@@ -105,7 +115,6 @@ export default function AdminPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [adminKey, setAdminKey] = useState('')
   const [tab, setTab] = useState<AdminTab>('dashboard')
 
   // Data
@@ -114,7 +123,9 @@ export default function AdminPage() {
   const [clients, setClients] = useState<AdminClient[]>([])
   const [questionnaires, setQuestionnaires] = useState<AdminQuestionnaire[]>([])
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([])
+  const [kpis, setKpis] = useState<AdminKpis | null>(null)
   const [folderStatuses, setFolderStatuses] = useState<Record<string, AdminFolderStatus>>({})
+  const [siteUrlDrafts, setSiteUrlDrafts] = useState<Record<string, string>>({})
 
   const [selected, setSelected] = useState<string | null>(null)
   const [reply, setReply] = useState('')
@@ -128,41 +139,52 @@ export default function AdminPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    const saved = window.sessionStorage.getItem(ADMIN_SESSION_KEY)
-    if (saved) {
-      setAdminKey(saved)
-      setAuthenticated(true)
+    let cancelled = false
+
+    const restoreSession = async () => {
+      try {
+        const response = await fetch('/api/admin-auth', { cache: 'no-store' })
+        const data = await response.json() as { authenticated?: boolean }
+        if (!cancelled) setAuthenticated(Boolean(data.authenticated))
+      } catch {
+        if (!cancelled) setAuthenticated(false)
+      }
     }
+
+    void restoreSession()
+    return () => { cancelled = true }
   }, [])
 
   const loadData = useCallback(async () => {
     if (!authenticated) return
-    const key = adminKey
     try {
-      const [convResult, orderResult, clientResult, questionnaireResult, apptResult] = await Promise.all([
-        getAdminConversations(key),
-        getAdminOrders(key),
-        getAdminClients(key),
-        getAdminQuestionnaires(key),
-        fetch('/api/appointments').then(r => r.json()).catch(() => ({ success: false })),
-      ])
-      if (convResult.success && convResult.data?.conversations) {
-        setConversations(convResult.data.conversations as ChatConversation[])
+      const response = await fetch('/api/admin/dashboard', { cache: 'no-store' })
+
+      if (response.status === 401) {
+        setAuthenticated(false)
+        return
       }
-      if (orderResult.success && orderResult.data?.orders) {
-        setOrders(orderResult.data.orders as AdminOrder[])
+
+      const result = await response.json() as {
+        success?: boolean
+        conversations?: ChatConversation[]
+        orders?: AdminOrder[]
+        clients?: AdminClient[]
+        questionnaires?: AdminQuestionnaire[]
+        appointments?: AppointmentRecord[]
+        kpis?: AdminKpis
       }
-      if (clientResult.success && clientResult.data?.clients) {
-        setClients(clientResult.data.clients as AdminClient[])
-      }
-      if (questionnaireResult.success && questionnaireResult.data?.questionnaires) {
-        setQuestionnaires(questionnaireResult.data.questionnaires as AdminQuestionnaire[])
-      }
-      if (apptResult.success && apptResult.appointments) {
-        setAppointments(apptResult.appointments as AppointmentRecord[])
-      }
+
+      if (!response.ok || !result.success) return
+
+      setConversations(result.conversations ?? [])
+      setOrders(result.orders ?? [])
+      setClients(result.clients ?? [])
+      setQuestionnaires(result.questionnaires ?? [])
+      setAppointments(result.appointments ?? [])
+      setKpis(result.kpis ?? null)
     } catch { /* silent */ }
-  }, [authenticated, adminKey])
+  }, [authenticated])
 
   useEffect(() => {
     if (authenticated) {
@@ -242,10 +264,8 @@ export default function AdminPage() {
         body: JSON.stringify({ email: email.trim(), password }),
       })
       const data = await res.json()
-      if (data.success && data.secretKey) {
-        setAdminKey(data.secretKey)
+      if (data.success) {
         setAuthenticated(true)
-        window.sessionStorage.setItem(ADMIN_SESSION_KEY, data.secretKey)
       } else {
         setError('Identifiants incorrects.')
       }
@@ -255,8 +275,8 @@ export default function AdminPage() {
   }
 
   function handleLogout() {
+    void fetch('/api/admin-auth', { method: 'DELETE' })
     setAuthenticated(false)
-    setAdminKey('')
     setEmail('')
     setPassword('')
     setConversations([])
@@ -264,8 +284,8 @@ export default function AdminPage() {
     setClients([])
     setQuestionnaires([])
     setAppointments([])
+    setKpis(null)
     setSelected(null)
-    window.sessionStorage.removeItem(ADMIN_SESSION_KEY)
   }
 
   async function handleSendReply() {
@@ -276,12 +296,14 @@ export default function AdminPage() {
     const msg = reply.trim()
     setReply('')
     try {
-      await sendChatMessage({
-        clientEmail: selected,
-        clientName: conv.clientName,
-        author: 'admin',
-        message: msg,
-        adminKey: adminKey,
+      await fetch('/api/admin/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientEmail: selected,
+          clientName: conv.clientName,
+          message: msg,
+        }),
       })
       await loadData()
     } catch {
@@ -294,11 +316,15 @@ export default function AdminPage() {
   async function handleSendFirstVersion(order: AdminOrder) {
     if (!confirm(`Envoyer l'email de première version à ${order.email} ?`)) return
     try {
-      await sendFirstVersionEmail({
-        adminKey: adminKey,
-        clientEmail: order.email,
-        clientName: order.name || `${order.firstName} ${order.lastName}`,
-        siteUrl: order.siteUrl,
+      await fetch('/api/admin/first-version', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: order.orderId,
+          clientEmail: order.email,
+          clientName: order.name || `${order.firstName} ${order.lastName}`,
+          siteUrl: order.siteUrl,
+        }),
       })
       await loadData()
       alert('Email envoyé avec succès.')
@@ -307,37 +333,49 @@ export default function AdminPage() {
     }
   }
 
-  async function handleStatusChange(orderId: string, newStatus: string) {
+  async function updateOrder(orderId: string, updates: Record<string, unknown>) {
     try {
-      await updateOrderStatus({ adminKey: adminKey, orderId, status: newStatus })
+      await fetch('/api/admin/order-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, ...updates }),
+      })
       await loadData()
     } catch { /* silent */ }
   }
 
+  async function handleStatusChange(orderId: string, newStatus: string) {
+    await updateOrder(orderId, { status: newStatus })
+  }
+
   async function handleToggleChat(orderId: string, currentState: boolean) {
-    try {
-      await updateOrderStatus({ adminKey: adminKey, orderId, chatEnabled: !currentState })
-      await loadData()
-    } catch { /* silent */ }
+    await updateOrder(orderId, { chatEnabled: !currentState })
+  }
+
+  async function handleTogglePaid(order: AdminOrder) {
+    const next = !order.paid
+    const label = next
+      ? `Marquer la commande ${order.orderId} comme PAYÉE ?`
+      : `Repasser la commande ${order.orderId} en NON payée ?`
+    if (!confirm(label)) return
+    await updateOrder(order.orderId, { paid: next, ...(next ? { status: 'Payé' } : {}) })
+  }
+
+  async function handleSaveSiteUrl(order: AdminOrder) {
+    const draft = (siteUrlDrafts[order.orderId] ?? order.siteUrl).trim()
+    await updateOrder(order.orderId, { siteUrl: draft })
   }
 
   // ── Derived data ──
   const selectedConv = conversations.find((c) => c.clientEmail === selected)
   const unreadMessages = conversations.reduce((acc, conv) => acc + conv.unreadCount, 0)
   const ordersAwaitingAction = orders.filter((order) =>
-    ['En attente', 'Payé', 'Première version', 'Révision'].includes(order.status)
+    ['En attente', 'En attente — RDV à planifier', 'En cours', 'Révision', 'Validé'].includes(order.status)
   ).length
   const activeOrders = orders.filter((o) => o.status !== 'Annulé')
-  const firstVersionsToSend = activeOrders.filter((order) => !order.firstVersionSent && order.status !== 'Annulé').length
-  const deliveredCount = orders.filter((o) => o.status === 'Livré').length
+  const firstVersionsToSend = activeOrders.filter((order) => !order.firstVersionSent).length
+  const deliveredCount = orders.filter((o) => o.status === 'Livré' || o.paid).length
   const conversionRate = activeOrders.length > 0 ? Math.round((deliveredCount / activeOrders.length) * 100) : 0
-  const totalRevenue = activeOrders.reduce((sum, o) => {
-    const amount = parseFloat(o.amount) || 0
-    return sum + amount
-  }, 0)
-  const totalRevenueDisplay = activeOrders.some((o) => (o.currency || '€') !== '€')
-    ? totalRevenue.toLocaleString('fr-FR')
-    : totalRevenue.toLocaleString('fr-FR')
 
   const upcomingAppointments = useMemo(() =>
     appointments
@@ -382,14 +420,9 @@ export default function AdminPage() {
       (q.orderId || '').toLowerCase().includes(search.toLowerCase())
   )
 
-  // Appends adminKey to /api/client-downloads/file/... URLs so the secure
-  // file-serving route accepts the request.
+  // The file route accepts the admin session cookie — URLs work as-is.
   function buildAdminFileUrl(url: string | null): string | null {
-    if (!url) return null
-    if (!url.startsWith('/api/client-downloads/file/')) return url
-    const u = new URL(url, window.location.origin)
-    u.searchParams.set('adminKey', adminKey)
-    return u.toString()
+    return url
   }
 
   // ── Monthly stats for mini chart ──
@@ -568,10 +601,10 @@ export default function AdminPage() {
                 <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}>
                   {/* KPI Cards */}
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-8">
-                    <KpiCard icon={ShoppingCart} label="Commandes" value={String(orders.length)} sub={`${ordersAwaitingAction} a traiter`} trend={orders.length > 0 ? '+' + orders.length : undefined} color="white" />
-                    <KpiCard icon={Users} label="Clients" value={String(clients.length)} sub={`${deliveredCount} livres`} color="blue" />
-                    <KpiCard icon={TrendingUp} label="Chiffre d'affaires" value={`${totalRevenue}\u00A0\u20AC`} sub={`${conversionRate}% conversion`} color="emerald" />
-                    <KpiCard icon={MessageCircle} label="Messages non lus" value={String(unreadMessages)} sub={`${conversations.length} conversations`} color="amber" />
+                    <KpiCard icon={ShoppingCart} label="Commandes" value={String(kpis?.totalOrders ?? orders.length)} sub={`${kpis?.pending ?? ordersAwaitingAction} en attente \u00B7 ${kpis?.last7Days ?? 0} sur 7 jours`} color="white" />
+                    <KpiCard icon={TrendingUp} label="CA potentiel" value={`${(kpis?.revenuePotential ?? 0).toLocaleString('fr-FR')}\u00A0\u20AC`} sub={`${(kpis?.revenuePaid ?? 0).toLocaleString('fr-FR')} \u20AC encaiss\u00E9s`} color="emerald" />
+                    <KpiCard icon={Globe} label="Option h\u00E9bergement" value={`${kpis?.hostingRate ?? 0}%`} sub={`${kpis?.hostingCount ?? 0} commande(s)`} color="blue" />
+                    <KpiCard icon={Video} label="Demandes de visio" value={String(kpis?.visioCount ?? appointments.length)} sub={`${upcomingAppointments.length} \u00E0 venir`} color="amber" />
                   </div>
 
                   <div className="grid gap-6 lg:grid-cols-3">
@@ -644,11 +677,11 @@ export default function AdminPage() {
                   {/* Status breakdown */}
                   <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                     {[
-                      { label: 'En attente', count: orders.filter(o => o.status === 'En attente').length, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-                      { label: 'En cours', count: orders.filter(o => o.status === 'En cours' || o.status === 'Paye').length, color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-                      { label: '1ere version', count: orders.filter(o => o.status === 'Première version' || o.status === 'Revision').length, color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
-                      { label: 'Livres', count: deliveredCount, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-                      { label: 'Questionnaires', count: questionnaires.length, color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
+                      { label: 'En attente', count: orders.filter(o => o.status.startsWith('En attente')).length, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                      { label: 'En cours', count: orders.filter(o => o.status === 'En cours').length, color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+                      { label: '1ère version / révision', count: orders.filter(o => ['Première version', 'Révision', 'Revision'].includes(o.status)).length, color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
+                      { label: 'Validées', count: orders.filter(o => o.status === 'Validé').length, color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
+                      { label: 'Payées / livrées', count: deliveredCount, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
                     ].map((s) => (
                       <div key={s.label} className={cn('rounded-xl border px-4 py-3 flex items-center justify-between', s.color)}>
                         <span className="text-xs font-medium">{s.label}</span>
@@ -663,11 +696,15 @@ export default function AdminPage() {
                       <h3 className="text-sm font-semibold text-white">KPI & Performance</h3>
                       <TrendingUp size={16} className="text-neutral-600" />
                     </div>
-                    <div className="grid gap-4 md:grid-cols-4">
-                      <KpiMini icon={Zap} label="Conversion" value={`${conversionRate}%`} sub={`${deliveredCount} livres / ${orders.length} cmd`} />
-                      <KpiMini icon={ClipboardList} label="Questionnaires" value={String(questionnaires.length)} sub="Reponses recues" />
-                      <KpiMini icon={Calendar} label="RDV a venir" value={String(upcomingAppointments.length)} sub={`${appointments.length} total`} />
-                      <KpiMini icon={FileText} label="1ere version" value={String(firstVersionsToSend)} sub="A envoyer" />
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                      <KpiMini icon={Zap} label="Conversion" value={`${conversionRate}%`} sub={`${deliveredCount} payées / ${orders.length} cmd`} />
+                      <KpiMini icon={ClipboardList} label="Questionnaires" value={String(kpis?.questionnaires ?? questionnaires.length)} sub="Réponses reçues" />
+                      <KpiMini icon={Calendar} label="Commandes 7 jours" value={String(kpis?.last7Days ?? 0)} sub="7 derniers jours" />
+                      <KpiMini icon={FileText} label="1ère version" value={String(firstVersionsToSend)} sub="À envoyer" />
+                      <KpiMini icon={Globe} label="Hébergement" value={String(kpis?.hostingCount ?? 0)} sub={`${kpis?.hostingRate ?? 0}% des commandes`} />
+                      <KpiMini icon={Video} label="Visios demandées" value={String(kpis?.visioCount ?? appointments.length)} sub={`${upcomingAppointments.length} à venir`} />
+                      <KpiMini icon={CheckCircle2} label="Terminées" value={String(kpis?.completed ?? deliveredCount)} sub="Payées ou livrées" />
+                      <KpiMini icon={MessageCircle} label="Messages non lus" value={String(unreadMessages)} sub={`${conversations.length} conversations`} />
                     </div>
                   </div>
                 </motion.div>
@@ -723,32 +760,53 @@ export default function AdminPage() {
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-mono text-sm font-semibold text-white">{order.orderId}</span>
                                   <DarkStatusBadge status={order.status} />
+                                  {order.paid ? <DarkFlag tone="emerald" label="Payé" /> : <DarkFlag tone="amber" label="Non payé" />}
+                                  {order.hosting && <DarkFlag tone="blue" label="Hébergement +5€" />}
                                   {order.chatEnabled && <DarkFlag tone="emerald" label="Chat actif" />}
-                                  {folder?.found ? <DarkFlag tone="blue" label="Dossier" /> : <DarkFlag tone="amber" label="Pas de dossier" />}
                                 </div>
                                 <p className="text-sm text-neutral-400 mt-1">{order.name || `${order.firstName} ${order.lastName}`} — {order.email}</p>
                                 <p className="text-xs text-neutral-600 mt-0.5">{formatDate(order.date)}</p>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-bold text-white">{order.amount}{order.currency}</p>
-                                <p className="text-xs text-neutral-500">{order.profession}</p>
+                                <p className="text-lg font-bold text-white">{order.amount || '20 €'}</p>
+                                <p className="text-xs text-neutral-500">{order.paid ? 'encaissé' : 'à encaisser après validation'}</p>
                               </div>
                             </div>
 
-                            {order.positionsSearched && (
-                              <p className="text-xs text-neutral-500"><span className="font-medium text-neutral-400">Postes :</span> {order.positionsSearched}</p>
-                            )}
-
                             <div className="grid gap-2 text-xs sm:grid-cols-3">
                               <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] px-3 py-2">
-                                <span className="text-neutral-400">Profession :</span> <span className="text-neutral-300">{order.profession || '—'}</span>
+                                <span className="text-neutral-400">Visio :</span>{' '}
+                                <span className="text-neutral-300">{order.meetTime || 'Non réservée'}</span>
                               </div>
                               <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] px-3 py-2">
-                                <span className="text-neutral-400">1ere version :</span> <span className="text-neutral-300">{order.firstVersionSent ? 'Envoyee' : 'En attente'}</span>
+                                <span className="text-neutral-400">1ère version :</span>{' '}
+                                <span className="text-neutral-300">{order.firstVersionSent ? 'Envoyée' : 'En attente'}</span>
                               </div>
                               <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] px-3 py-2">
-                                <span className="text-neutral-400">Chat :</span> <span className="text-neutral-300">{order.chatEnabled ? 'Actif' : 'Masque'}</span>
+                                <span className="text-neutral-400">Hébergement :</span>{' '}
+                                <span className="text-neutral-300">{order.hosting ? 'Oui (+5 €)' : 'Non'}</span>
                               </div>
+                            </div>
+
+                            {/* URL du site livré (aperçu espace client) */}
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              <LinkIcon size={12} className="text-neutral-500 shrink-0" />
+                              <input
+                                value={siteUrlDrafts[order.orderId] ?? order.siteUrl}
+                                onChange={(e) =>
+                                  setSiteUrlDrafts((prev) => ({ ...prev, [order.orderId]: e.target.value }))
+                                }
+                                placeholder="URL du E-CV livré (ex: https://client.netlify.app)"
+                                className="flex-1 min-w-[200px] rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-neutral-300 outline-none placeholder:text-neutral-600 focus:border-white/20"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveSiteUrl(order)}
+                                disabled={(siteUrlDrafts[order.orderId] ?? order.siteUrl) === order.siteUrl}
+                                className="rounded-lg bg-white/[0.06] px-3 py-1.5 font-medium text-neutral-300 transition-colors hover:bg-white/[0.12] disabled:opacity-40"
+                              >
+                                Enregistrer
+                              </button>
                             </div>
 
                             {folder?.found && (
@@ -771,14 +829,28 @@ export default function AdminPage() {
                                 onChange={(e) => handleStatusChange(order.orderId, e.target.value)}
                                 className="text-xs border border-white/[0.08] rounded-lg px-2 py-1.5 bg-white/[0.03] text-neutral-300 outline-none"
                               >
-                                {['En attente', 'Payé', 'En cours', 'Première version', 'Révision', 'Livré', 'Annulé'].map((s) => (
+                                {['En attente', 'En attente — RDV à planifier', 'En cours', 'Première version', 'Révision', 'Validé', 'Payé', 'Livré', 'Annulé'].map((s) => (
                                   <option key={s} value={s}>{s}</option>
                                 ))}
                               </select>
 
                               <button
                                 type="button"
-                                onClick={() => handleToggleChat(order.orderId, order.chatEnabled)}
+                                onClick={() => handleTogglePaid(order)}
+                                className={cn(
+                                  'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
+                                  order.paid
+                                    ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                                    : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                                )}
+                              >
+                                <CheckCircle2 size={12} />
+                                {order.paid ? 'Payé ✓' : 'Marquer payé'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleToggleChat(order.orderId, Boolean(order.chatEnabled))}
                                 className={cn(
                                   'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
                                   order.chatEnabled

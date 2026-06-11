@@ -34,7 +34,11 @@ function getAuth() {
 }
 
 function getSpreadsheetId(): string {
-  return process.env.GOOGLE_SHEETS_ID || '1dxEE12fXMzXi2NPzviiy9jm1uiFDo0hRApCkiQFipw0'
+  const id = process.env.GOOGLE_SHEETS_ID || process.env.GOOGLE_SPREADSHEET_ID || ''
+  if (!id) {
+    console.warn('[sheetsApi] GOOGLE_SHEETS_ID / GOOGLE_SPREADSHEET_ID not set')
+  }
+  return id
 }
 
 export async function readAppointmentsFromSheets(): Promise<SheetAppointmentRecord[]> {

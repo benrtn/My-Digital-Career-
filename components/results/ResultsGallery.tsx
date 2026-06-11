@@ -10,28 +10,20 @@ import { resultItems } from '@/data/results'
 const SLIDE_INTERVAL = 5000
 
 function BrowserMockup({ item }: { item: typeof resultItems[0] }) {
+  // Visual example only — client e-CVs are intentionally not linked.
   return (
     <div className="rounded-[2rem] overflow-hidden shadow-glass-lg border border-white/70 bg-white/60 backdrop-blur-xl">
-      <a
-        href={item.siteUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="group block"
-      >
-        <div className="relative overflow-hidden aspect-[16/10]">
-          <img
-            src={item.imagePath}
-            alt="Exemple de site My Digital Career"
-            className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.02]"
-            loading="eager"
-          />
-          <div className="absolute inset-0 flex items-center justify-center bg-neutral-950/0 transition-colors duration-300 group-hover:bg-neutral-950/40">
-            <span className="rounded-2xl bg-white/95 px-5 py-3 text-sm font-semibold text-neutral-950 shadow-lg opacity-0 transition-all duration-300 group-hover:opacity-100">
-              Voir le site
-            </span>
-          </div>
-        </div>
-      </a>
+      <div className="relative overflow-hidden aspect-[16/10]">
+        <img
+          src={item.imagePath}
+          alt="Exemple de site My Digital Career"
+          className="h-full w-full object-cover object-top"
+          loading="eager"
+        />
+        <span className="absolute left-4 top-4 rounded-full bg-neutral-950/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+          Exemple
+        </span>
+      </div>
     </div>
   )
 }

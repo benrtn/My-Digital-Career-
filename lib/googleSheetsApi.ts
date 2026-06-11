@@ -23,6 +23,10 @@ const ORDER_HEADERS = [
   'Payé ?',
   'Heure du meet',
   'Lien du google meet',
+  'Option hébergement',
+  'Montant',
+  'URL Site',
+  'Première version envoyée',
 ] as const
 
 const QUESTIONNAIRE_HEADERS = [
@@ -453,8 +457,11 @@ export interface OrderRow {
   paid?: string
   meetTime?: string
   meetLink?: string
-  // Legacy fields kept for compatibility but no longer written to Sheets
+  hosting?: string
   amount?: string
+  siteUrl?: string
+  firstVersionSent?: string
+  // Legacy fields kept for compatibility but no longer written to Sheets
   currency?: string
   profession?: string
   positionsSearched?: string
@@ -475,6 +482,10 @@ export async function appendOrderRow(data: OrderRow): Promise<boolean> {
     'Payé ?': data.paid ?? 'Non',
     'Heure du meet': data.meetTime ?? 'En attente',
     'Lien du google meet': data.meetLink ?? 'En attente',
+    'Option hébergement': data.hosting ?? 'Non',
+    Montant: data.amount ?? '',
+    'URL Site': data.siteUrl ?? '',
+    'Première version envoyée': data.firstVersionSent ?? 'Non',
   })
 }
 
@@ -487,6 +498,10 @@ export async function updateOrderInSheets(
     ...(updates.paid !== undefined ? { 'Payé ?': updates.paid } : {}),
     ...(updates.meetTime !== undefined ? { 'Heure du meet': updates.meetTime } : {}),
     ...(updates.meetLink !== undefined ? { 'Lien du google meet': updates.meetLink } : {}),
+    ...(updates.hosting !== undefined ? { 'Option hébergement': updates.hosting } : {}),
+    ...(updates.amount !== undefined ? { Montant: updates.amount } : {}),
+    ...(updates.siteUrl !== undefined ? { 'URL Site': updates.siteUrl } : {}),
+    ...(updates.firstVersionSent !== undefined ? { 'Première version envoyée': updates.firstVersionSent } : {}),
   })
 }
 
@@ -694,21 +709,49 @@ export async function updateOrderPaymentStatus(
   })
 }
 
+function rowToOrder(row: string[], headers: string[]): OrderRow {
+  return {
+    orderId: getRowValue(row, headers, 'N° Commande'),
+    date: getRowValue(row, headers, 'Dates'),
+    lastName: getRowValue(row, headers, 'Nom'),
+    firstName: getRowValue(row, headers, 'Prénom'),
+    email: getRowValue(row, headers, 'Adresse mail'),
+    status: getRowValue(row, headers, 'Statut'),
+    paid: getRowValue(row, headers, 'Payé ?'),
+    meetTime: getRowValue(row, headers, 'Heure du meet'),
+    meetLink: getRowValue(row, headers, 'Lien du google meet'),
+    hosting: getRowValue(row, headers, 'Option hébergement'),
+    amount: getRowValue(row, headers, 'Montant'),
+    siteUrl: getRowValue(row, headers, 'URL Site'),
+    firstVersionSent: getRowValue(row, headers, 'Première version envoyée'),
+  }
+}
+
 export async function getOrderByOrderId(orderId: string): Promise<OrderRow | null> {
   const match = await findRowByHeaderValue(SHEET_COMMANDES, ORDER_HEADERS, 'N° Commande', orderId)
   if (!match) return null
+  return rowToOrder(match.row, match.headers)
+}
 
-  return {
-    orderId: getRowValue(match.row, match.headers, 'N° Commande'),
-    date: getRowValue(match.row, match.headers, 'Dates'),
-    lastName: getRowValue(match.row, match.headers, 'Nom'),
-    firstName: getRowValue(match.row, match.headers, 'Prénom'),
-    email: getRowValue(match.row, match.headers, 'Adresse mail'),
-    status: getRowValue(match.row, match.headers, 'Statut'),
-    paid: getRowValue(match.row, match.headers, 'Payé ?'),
-    meetTime: getRowValue(match.row, match.headers, 'Heure du meet'),
-    meetLink: getRowValue(match.row, match.headers, 'Lien du google meet'),
+/** Latest order for a client email (most recent row wins). */
+export async function findLatestOrderByEmail(email: string): Promise<OrderRow | null> {
+  const headers = await ensureHeaders(SHEET_COMMANDES, ORDER_HEADERS)
+  if (!headers) return null
+
+  const emailIndex = getHeaderIndex(headers, 'Adresse mail')
+  if (emailIndex < 0) return null
+
+  const rows = await readSheet(SHEET_COMMANDES)
+  const target = email.trim().toLowerCase()
+
+  for (let rowIndex = rows.length - 1; rowIndex >= 1; rowIndex -= 1) {
+    const value = (rows[rowIndex]?.[emailIndex] ?? '').trim().toLowerCase()
+    if (value === target) {
+      return rowToOrder(rows[rowIndex] ?? [], headers)
+    }
   }
+
+  return null
 }
 
 export { readSheet, updateCell }

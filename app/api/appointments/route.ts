@@ -10,11 +10,13 @@ import {
   appendAppointmentToSheets,
 } from '@/lib/sheetsApi'
 import type { SheetAppointmentRecord } from '@/lib/sheetsApi'
+import { notifyAppointmentBooked } from '@/lib/discord'
 
 export const runtime = 'nodejs'
 
 const DAYS_AHEAD = 10
-const DURATION_MINUTES = 60
+// Visio de 30 minutes (offre commerciale) — un créneau par heure ouvrée
+const DURATION_MINUTES = 30
 const BUSINESS_HOURS = { start: 7, end: 22 } // Europe/Paris wall-clock hours
 const TIMEZONE = 'Europe/Paris'
 
@@ -271,7 +273,18 @@ export async function POST(request: Request) {
     // Write to Google Sheets (primary store)
     await appendAppointmentToSheets(record)
 
-    // Sync to Apps Script for Discord notification (non-blocking)
+    // Discord notification (non-blocking)
+    notifyAppointmentBooked({
+      orderId: orderId || undefined,
+      firstName,
+      lastName,
+      email,
+      dateLabel: formatDateLabel(startDate),
+      timeLabel: `${formatTimeLabel(startDate)} - ${formatTimeLabel(endDate)}`,
+      meetLink: calendarResult.meetLink ?? undefined,
+    }).catch((err) => console.warn('[appointments] Discord notify failed:', err))
+
+    // Sync to Apps Script for the confirmation email (non-blocking)
     saveAppointmentToSheets({
       id: record.id,
       email,

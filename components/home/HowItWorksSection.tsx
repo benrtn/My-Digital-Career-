@@ -1,12 +1,12 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ShoppingBag, FileText, Monitor, MessageSquareMore, Download } from 'lucide-react'
+import { ClipboardList, FileText, Video, Monitor, MessageSquareMore, Download } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Badge } from '@/components/ui/Badge'
 import { ScrollCue } from '@/components/ui/ScrollCue'
 
-const stepIcons = [ShoppingBag, FileText, Monitor, MessageSquareMore, Download]
+const stepIcons = [ClipboardList, Video, Monitor, MessageSquareMore, Download]
 
 export function HowItWorksSection() {
   const { t } = useLanguage()

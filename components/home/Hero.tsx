@@ -161,12 +161,12 @@ export function Hero() {
                 return (
                   <div
                     key={i}
-                    className="min-w-[100px] sm:min-w-[132px] flex-1 sm:flex-none rounded-2xl border border-neutral-200/80 bg-white/80 backdrop-blur-xl px-3 sm:px-5 py-3 sm:py-4 text-center shadow-glass"
+                    className="min-w-[100px] sm:min-w-[132px] flex-1 sm:flex-none flex flex-col items-center justify-between gap-2.5 rounded-2xl border border-neutral-200/80 bg-white/80 backdrop-blur-xl px-3 sm:px-5 py-3 sm:py-4 text-center shadow-glass"
                   >
                     <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${accents[i]}`}>
                       {label}
                     </span>
-                    <div className="mt-3 text-xl font-semibold tracking-tight text-neutral-950">
+                    <div className="text-xl font-semibold tracking-tight text-neutral-950">
                       {value}
                     </div>
                   </div>

@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server'
-import { mkdir, readFile, readdir, writeFile } from 'fs/promises'
+import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 import { buildClientFolderName } from '@/lib/clientDownloads'
+import { CLIENT_DOWNLOADS_DIR, findClientFolder } from '@/lib/clientDownloads.server'
+import { hashPassword } from '@/lib/auth'
 import type { AppointmentSelection } from '@/types'
 
 export const runtime = 'nodejs'
-
-// Files live outside /public so they are never served statically.
-// Actual file access goes through /api/client-downloads/file/[...path].
-const CLIENT_DOWNLOADS_DIR = path.join(process.cwd(), 'uploads', 'client-downloads')
 
 export async function GET(request: Request) {
   try {
@@ -23,7 +21,7 @@ export async function GET(request: Request) {
       )
     }
 
-    const entry = await findClientFolder({ email, folder })
+    const entry = await findClientFolder({ email: email || undefined, folder: folder || undefined })
 
     if (!entry) {
       return NextResponse.json({ success: true, found: false })
@@ -74,11 +72,12 @@ export async function POST(request: Request) {
 
     await mkdir(targetDir, { recursive: true })
 
+    // Only the bcrypt hash is persisted — never the plaintext password.
     const metadata = {
       firstName,
       lastName,
       email,
-      password,
+      passwordHash: password ? await hashPassword(password) : '',
       orderId,
       folderName,
       createdAt,
@@ -109,79 +108,3 @@ export async function POST(request: Request) {
   }
 }
 
-async function findClientFolder({
-  email,
-  folder,
-}: {
-  email?: string
-  folder?: string
-}) {
-  let entries
-  try {
-    entries = await readdir(CLIENT_DOWNLOADS_DIR, { withFileTypes: true })
-  } catch {
-    // Directory doesn't exist yet
-    return null
-  }
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-    if (folder && entry.name !== folder) continue
-
-    const folderPath = path.join(CLIENT_DOWNLOADS_DIR, entry.name)
-    const metadataPath = path.join(folderPath, 'metadata.json')
-
-    let metadata: {
-      firstName?: string
-      lastName?: string
-      email?: string
-      password?: string
-      orderId?: string
-      createdAt?: string
-      unlockAt?: string
-      folderName?: string
-      appointment?: AppointmentSelection | null
-    } | null = null
-
-    try {
-      const raw = await readFile(metadataPath, 'utf8')
-      metadata = JSON.parse(raw)
-    } catch {
-      metadata = null
-    }
-
-    if (email && metadata?.email?.trim().toLowerCase() !== email) {
-      continue
-    }
-
-    const files = await readdir(folderPath)
-    const zipFile = files.find((file) => file.toLowerCase().endsWith('.zip'))
-    const htmlFile = files.find((file) => {
-      const lower = file.toLowerCase()
-      return lower === 'index.html' || lower.endsWith('.html')
-    })
-    const previewImage = files.find((file) => /\.(webp|png|jpe?g|gif)$/i.test(file))
-
-    const createdAt = metadata?.createdAt ?? null
-    const unlockAt = metadata?.unlockAt ?? null
-    const remainingMs = unlockAt ? Math.max(new Date(unlockAt).getTime() - Date.now(), 0) : 0
-
-    // Return API URLs — the caller must append auth params before use
-    return {
-      folderName: entry.name,
-      createdAt,
-      unlockAt,
-      remainingMs,
-      zipUrl: zipFile ? `/api/client-downloads/file/${entry.name}/${zipFile}` : null,
-      previewUrl: htmlFile ? `/api/client-downloads/file/${entry.name}/${htmlFile}` : null,
-      previewImageUrl: previewImage ? `/api/client-downloads/file/${entry.name}/${previewImage}` : null,
-      hasZip: Boolean(zipFile),
-      hasPreview: Boolean(htmlFile),
-      readyAt: remainingMs === 0,
-      orderId: metadata?.orderId ?? null,
-      appointment: metadata?.appointment ?? null,
-    }
-  }
-
-  return null
-}

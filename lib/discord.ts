@@ -62,7 +62,18 @@ export async function notifyNewOrder(data: {
   email: string
   amount: string
   currency: string
+  hosting?: string
+  appointment?: string
 }): Promise<boolean> {
+  const fields = [
+    { name: 'N° Commande', value: data.orderId, inline: true },
+    { name: 'Client', value: `${data.firstName} ${data.lastName}`, inline: true },
+    { name: 'Email', value: data.email, inline: false },
+    { name: 'Montant (à encaisser après validation)', value: `${data.amount} ${data.currency}`, inline: true },
+  ]
+  if (data.hosting) fields.push({ name: 'Option hébergement', value: data.hosting, inline: true })
+  if (data.appointment) fields.push({ name: 'Visio 30 min', value: data.appointment, inline: true })
+
   return sendWebhook(
     process.env.DISCORD_WEBHOOK_NOTIFICATIONS,
     '',
@@ -70,11 +81,59 @@ export async function notifyNewOrder(data: {
       {
         title: '🛒 Nouvelle commande',
         color: 0xd4af37, // gold
+        fields,
+        timestamp: new Date().toISOString(),
+      },
+    ]
+  )
+}
+
+export async function notifyOrderStatusChanged(data: {
+  orderId: string
+  status?: string
+  paid?: string
+  firstVersionSent?: boolean
+  chatEnabled?: boolean
+}): Promise<boolean> {
+  const changes: string[] = []
+  if (data.status) changes.push(`Statut → **${data.status}**`)
+  if (data.paid) changes.push(`Payé → **${data.paid}**`)
+  if (data.firstVersionSent !== undefined) changes.push(`Première version → **${data.firstVersionSent ? 'Envoyée' : 'Non envoyée'}**`)
+  if (data.chatEnabled !== undefined) changes.push(`Chat → **${data.chatEnabled ? 'Activé' : 'Désactivé'}**`)
+  if (changes.length === 0) return true
+
+  return sendWebhook(
+    process.env.DISCORD_WEBHOOK_NOTIFICATIONS,
+    '',
+    [
+      {
+        title: '🔄 Statut de commande mis à jour',
+        description: changes.join('\n'),
+        color: 0x0ea5e9, // sky blue
+        fields: [{ name: 'N° Commande', value: data.orderId, inline: true }],
+        timestamp: new Date().toISOString(),
+      },
+    ]
+  )
+}
+
+export async function notifyClientApproval(data: {
+  orderId?: string
+  clientName: string
+  clientEmail: string
+}): Promise<boolean> {
+  return sendWebhook(
+    process.env.DISCORD_WEBHOOK_NOTIFICATIONS,
+    '',
+    [
+      {
+        title: '✅ E-CV validé par le client',
+        description: 'Le client a validé son E-CV — envoyer les instructions de paiement.',
+        color: 0x16a34a,
         fields: [
-          { name: 'N° Commande', value: data.orderId, inline: true },
-          { name: 'Client', value: `${data.firstName} ${data.lastName}`, inline: true },
-          { name: 'Email', value: data.email, inline: false },
-          { name: 'Montant', value: `${data.amount} ${data.currency}`, inline: true },
+          { name: 'Client', value: data.clientName, inline: true },
+          { name: 'Email', value: data.clientEmail, inline: true },
+          ...(data.orderId ? [{ name: 'Commande', value: data.orderId, inline: true }] : []),
         ],
         timestamp: new Date().toISOString(),
       },

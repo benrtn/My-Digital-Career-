@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { appendQuestionnaireRow, isGoogleSheetsConfigured, getLastSheetsError } from '@/lib/googleSheetsApi'
 import { createClientFolder, uploadFileToDrive, isDriveConfigured } from '@/lib/googleDriveApi'
+import { notifyNewQuestionnaire } from '@/lib/discord'
 import { generateOrderId, formatDateFR } from '@/lib/orderUtils'
 
 export const runtime = 'nodejs'
@@ -207,6 +208,17 @@ export async function POST(request: Request) {
       { status: 502 }
     )
   }
+
+  // Discord notification (non-blocking)
+  notifyNewQuestionnaire({
+    orderId,
+    firstName,
+    lastName,
+    email: str(body['email']),
+    profession: str(body['profession']),
+    colorPalette: str(body['colorPalette']),
+    siteStyle: str(body['siteStyle']),
+  }).catch((err) => console.warn('[questionnaire] Discord notify failed:', err))
 
   return NextResponse.json({ success: true, orderId, warnings })
 }

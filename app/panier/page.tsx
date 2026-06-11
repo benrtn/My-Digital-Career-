@@ -20,6 +20,7 @@ export default function CartPage() {
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null)
   const [appointment, setAppointment] = useState<AppointmentSelection | null>(null)
   const [skipAppointment, setSkipAppointment] = useState(false)
+  const [hosting, setHosting] = useState(false)
 
   const handleComplete = (data: QuestionnaireData) => {
     setQuestionnaireData(data)
@@ -63,7 +64,7 @@ export default function CartPage() {
             {/* Left column */}
             <div className="min-w-0 space-y-6">
               {/* Cart summary */}
-              <CartSummary />
+              <CartSummary hosting={hosting} onHostingChange={setHosting} />
 
               {/* Questionnaire CTA */}
               <motion.div
@@ -177,7 +178,7 @@ export default function CartPage() {
                                 Prendre mon créneau plus tard
                               </p>
                               <p className="max-w-2xl text-sm leading-relaxed text-white/65">
-                                Passez au paiement maintenant et réservez votre rendez-vous Google Meet ensuite depuis votre espace client.
+                                Confirmez votre commande maintenant et réservez votre rendez-vous Google Meet ensuite depuis votre espace client.
                               </p>
                             </div>
                           </div>
@@ -217,7 +218,7 @@ export default function CartPage() {
                     exit={{ opacity: 0, y: 20, scale: 0.97 }}
                     transition={{ duration: 0.5, type: 'spring', stiffness: 200, damping: 20 }}
                   >
-                    <PaymentBlock questionnaireData={questionnaireData} appointment={appointment} skipAppointment={skipAppointment} />
+                    <PaymentBlock questionnaireData={questionnaireData} appointment={appointment} skipAppointment={skipAppointment} hosting={hosting} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -233,7 +234,7 @@ export default function CartPage() {
                     <ClipboardList size={20} className="text-neutral-400" />
                   </div>
                   <p className="text-sm text-neutral-400 leading-relaxed">
-                    Le paiement sera disponible après avoir complété le questionnaire.
+                    La confirmation de commande sera disponible après le questionnaire. Aucun paiement aujourd&apos;hui.
                   </p>
                 </motion.div>
               )}
@@ -246,7 +247,7 @@ export default function CartPage() {
                   className="mt-4 bg-white/30 backdrop-blur-sm border border-neutral-200/40 rounded-3xl p-8 text-center space-y-3"
                 >
                   <p className="text-sm text-neutral-500 leading-relaxed">
-                    Sélectionnez un rendez-vous Google Meet ou choisissez de le planifier plus tard pour débloquer le paiement.
+                    Sélectionnez un rendez-vous Google Meet ou choisissez de le planifier plus tard pour confirmer votre commande.
                   </p>
                 </motion.div>
               ) : null}

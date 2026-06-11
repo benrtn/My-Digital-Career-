@@ -41,3 +41,19 @@ export function getLocalizedPrice(lang: 'fr' | 'en' | 'th') {
     inline: `${siteConfig.price}${siteConfig.currency}`,
   }
 }
+
+export function getLocalizedHostingPrice(lang: 'fr' | 'en' | 'th') {
+  if (lang === 'th') {
+    return {
+      amount: '185',
+      currency: '฿',
+      inline: '185฿',
+    }
+  }
+
+  return {
+    amount: '5',
+    currency: siteConfig.currency,
+    inline: `5${siteConfig.currency}`,
+  }
+}

@@ -22,7 +22,7 @@ import {
   submitOrderViaAppsScript,
 } from '@/lib/googleAppsScript.server'
 import { notifyClientAccountCreated, notifyNewOrder } from '@/lib/discord'
-import { hashPassword, createClientToken } from '@/lib/auth'
+import { hashPassword, createClientToken, CLIENT_SESSION_COOKIE } from '@/lib/auth'
 import { generateOrderId, formatDateFR } from '@/lib/orderUtils'
 import { isValidEmail } from '@/lib/utils'
 
@@ -41,6 +41,7 @@ interface OrderPayload {
   amount?: string
   currency?: string
   skipAppointment?: boolean
+  hostingOption?: boolean
   authorization?: string
   cookiesAccepted?: string
 }
@@ -81,6 +82,8 @@ export async function POST(request: Request) {
     const orderId = body.orderId?.trim() || generateOrderId()
     const date = formatDateFR()
     const status = body.skipAppointment ? 'En attente — RDV à planifier' : 'En attente'
+    const hosting = body.hostingOption ? 'Oui' : 'Non'
+    const amountDisplay = amount ? `${amount} ${currency}`.trim() : ''
     const passwordHash = await hashPassword(password)
 
     let persistence: 'google-sheets' | 'apps-script' | 'mixed' | null = null
@@ -97,6 +100,8 @@ export async function POST(request: Request) {
         email,
         status,
         paid: 'Non',
+        hosting,
+        amount: amountDisplay,
       })
 
       clientSavedDirectly = orderSavedDirectly
@@ -192,6 +197,7 @@ export async function POST(request: Request) {
       )
     }
 
+    // Session cookie so the client lands logged-in on /mon-site after ordering
     const token = await createClientToken({
       email,
       name: `${firstName} ${lastName}`.trim(),
@@ -250,6 +256,8 @@ export async function POST(request: Request) {
         email,
         amount,
         currency,
+        hosting: body.hostingOption ? 'Oui (+5 €)' : 'Non',
+        appointment: body.skipAppointment ? 'À planifier plus tard' : 'Réservé pendant la commande',
       }),
       notifyClientAccountCreated({
         orderId,
@@ -269,13 +277,20 @@ export async function POST(request: Request) {
       }
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       orderId,
-      token,
       persistence,
       warnings,
     })
+    response.cookies.set(CLIENT_SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    })
+    return response
   } catch (error) {
     console.error('[orders] POST failed:', error)
     return NextResponse.json(
