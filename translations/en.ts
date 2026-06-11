@@ -93,8 +93,8 @@ export const en = {
     badge_example: 'Example',
     items: {
       p1: {
-        title: 'Azzeddine',
-        profession: 'E-CV',
+        title: 'Benjamin I.',
+        profession: 'E-CV · Customer advisor',
         description: 'A premium layout built for a sharp and instantly professional presentation.',
       },
       p2: {
@@ -114,8 +114,8 @@ export const en = {
       },
       p5: {
         title: 'Benjamin I.',
-        profession: 'E-CV',
-        description: 'A modern and impactful format built to be shared easily anywhere.',
+        profession: 'E-CV · Skills',
+        description: 'A structured, readable skills section designed to convince at a glance.',
       },
     },
   },
@@ -448,9 +448,9 @@ export const en = {
     },
     items: {
       r1: {
-        title: 'Alexandra M.',
-        profession: 'Marketing Director',
-        description: 'Authority, elegance and impact in every section.',
+        title: 'Benjamin I.',
+        profession: 'Customer advisor · Client relations',
+        description: 'Clarity, restraint and impact from the first second.',
       },
       r2: {
         title: 'Thomas R.',

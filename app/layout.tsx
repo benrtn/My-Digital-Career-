@@ -39,8 +39,8 @@ export default function RootLayout({
     <html lang="fr" className={`${inter.variable} ${playfair.variable}`}>
       <head>
         {/* Preload hero images */}
-        <link rel="preload" href="/creation/siteazzeddine.webp" as="image" type="image/webp" />
-        <link rel="preload" href="/creation/siteben.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/creation/sitebenjamin-accueil.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/creation/sitemanon.webp" as="image" type="image/webp" />
         {/* DNS prefetch for external resources */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
       </head>

@@ -93,8 +93,8 @@ export const th = {
     badge_example: 'ตัวอย่าง',
     items: {
       p1: {
-        title: 'Azzeddine',
-        profession: 'E-CV',
+        title: 'Benjamin I.',
+        profession: 'E-CV · ที่ปรึกษาลูกค้า',
         description: 'เลย์เอาต์พรีเมียมสำหรับการนำเสนอที่ดูเป็นมืออาชีพและชัดเจนทันที',
       },
       p2: {
@@ -448,9 +448,9 @@ export const th = {
     },
     items: {
       r1: {
-        title: 'Alexandra M.',
-        profession: 'ผู้อำนวยการการตลาด',
-        description: 'อำนาจ ความหรูหรา และผลกระทบในทุกส่วน',
+        title: 'Benjamin I.',
+        profession: 'ที่ปรึกษาลูกค้า · ลูกค้าสัมพันธ์',
+        description: 'ชัดเจน เรียบง่าย และทรงพลังตั้งแต่วินาทีแรก',
       },
       r2: {
         title: 'Thomas R.',

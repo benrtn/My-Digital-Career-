@@ -93,8 +93,8 @@ export const fr = {
     badge_example: 'Exemple',
     items: {
       p1: {
-        title: 'Azzeddine',
-        profession: 'E-CV',
+        title: 'Benjamin I.',
+        profession: 'E-CV · Téléconseiller',
         description: 'Un rendu premium pensé pour une présentation professionnelle claire et immédiate.',
       },
       p2: {
@@ -114,8 +114,8 @@ export const fr = {
       },
       p5: {
         title: 'Benjamin I.',
-        profession: 'E-CV',
-        description: 'Un format moderne et percutant, pensé pour être partagé facilement partout.',
+        profession: 'E-CV · Compétences',
+        description: 'Une section compétences structurée et lisible, pour convaincre en un coup d\'œil.',
       },
     },
   },
@@ -452,9 +452,9 @@ export const fr = {
     },
     items: {
       r1: {
-        title: 'Alexandra M.',
-        profession: 'Directrice Marketing',
-        description: 'Autorité, élégance et impact dans chaque section.',
+        title: 'Benjamin I.',
+        profession: 'Téléconseiller · Relation client',
+        description: 'Clarté, sobriété et impact dès la première seconde.',
       },
       r2: {
         title: 'Thomas R.',

@@ -36,3 +36,6 @@ npm-debug.log*
 
 # legacy local data — kept on disk, no longer tracked
 /data/client-downloads/
+
+# assets privés (données personnelles) — jamais publiés
+/private-assets/
