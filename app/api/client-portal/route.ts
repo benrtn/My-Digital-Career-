@@ -18,6 +18,11 @@ import {
 } from '@/lib/googleSheetsApi'
 import { readAppointmentsFromSheets } from '@/lib/sheetsApi'
 import { findClientFolder } from '@/lib/clientDownloads.server'
+import {
+  findClientFolderByOrderId,
+  findDeliverableZip,
+  isDriveConfigured,
+} from '@/lib/googleDriveApi'
 import { getClientSessionFromRequest } from '@/lib/session.server'
 
 export const runtime = 'nodejs'
@@ -59,6 +64,26 @@ export async function GET(request: Request) {
       .filter((item) => item.email === email)
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime())[0] ?? null
 
+    // Delivered ZIP dropped by the admin in the client's Drive folder
+    let driveZip: { fileId: string; name: string; url: string } | null = null
+    if (order?.orderId && isDriveConfigured()) {
+      try {
+        const folder = await findClientFolderByOrderId(order.orderId)
+        if (folder) {
+          const zip = await findDeliverableZip(folder.id)
+          if (zip) {
+            driveZip = {
+              fileId: zip.id,
+              name: zip.name,
+              url: `/api/client-downloads/drive/${zip.id}`,
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[client-portal] Drive deliverable lookup failed:', err)
+      }
+    }
+
     const status = order?.status ?? ''
     const paid = isYes(order?.paid)
     const firstVersionSent =
@@ -86,6 +111,7 @@ export async function GET(request: Request) {
           : null,
         appointment,
         downloads,
+        driveZip,
       },
     })
   } catch (error) {

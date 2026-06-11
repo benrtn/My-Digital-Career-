@@ -73,9 +73,9 @@ export const fr = {
     ],
     hosting: {
       label: 'Option',
-      title: 'Hébergement en ligne',
+      title: 'Hébergement en ligne · 1 an',
       price: '+5 €',
-      description: 'Nous mettons votre E-CV en ligne pour vous : un lien permanent, prêt à partager, sans rien gérer de technique.',
+      description: 'Nous mettons votre E-CV en ligne pendant 1 an : un lien prêt à partager, sans rien gérer de technique. Renouvelable 5 €/an.',
     },
     cta: 'Commencer — sans paiement',
     reassurance: '0 € à la commande · Première version sous 24 h · Support dédié',
@@ -208,7 +208,7 @@ export const fr = {
       },
       {
         question: 'Qu\'est-ce que l\'option hébergement à 5 € ?',
-        answer: 'Pour 5 € de plus, nous mettons votre E-CV en ligne à votre place : vous recevez un lien permanent, prêt à partager sur LinkedIn, par email ou sur votre CV papier — sans aucune manipulation technique de votre côté.',
+        answer: 'Pour 5 € de plus, nous mettons votre E-CV en ligne à votre place pendant 1 an : vous recevez un lien prêt à partager sur LinkedIn, par email ou sur votre CV papier — sans aucune manipulation technique de votre côté. L\'hébergement est ensuite renouvelable pour 5 €/an.',
       },
       {
         question: 'Que deviennent mes données et mes fichiers ?',
@@ -430,9 +430,9 @@ export const fr = {
       secure: 'Aucun paiement requis aujourd\'hui',
     },
     hosting: {
-      title: 'Hébergement en ligne',
+      title: 'Hébergement en ligne · 1 an',
       price: '+5 €',
-      description: 'Votre E-CV mis en ligne par nos soins, avec un lien permanent à partager. Réglé plus tard, en même temps que votre E-CV.',
+      description: 'Votre E-CV mis en ligne par nos soins pendant 1 an, avec un lien à partager (renouvelable 5 €/an). Réglé plus tard, en même temps que votre E-CV.',
       add: 'Ajouter l\'option',
       added: 'Option ajoutée ✓',
       remove: 'Retirer',

@@ -57,6 +57,7 @@ interface PortalState {
   order: PortalOrder | null
   appointment: PortalAppointment | null
   downloads: PortalDownloads | null
+  driveZip: { fileId: string; name: string; url: string } | null
 }
 
 type ReviewMode = 'idle' | 'chat' | 'approved'
@@ -204,7 +205,8 @@ export default function MonSitePage() {
   const previewUrl = order?.siteUrl || downloads?.previewUrl || ''
   const previewReady = Boolean(previewUrl) && (Boolean(order?.firstVersionSent) || Boolean(order?.siteUrl) || Boolean(downloads?.readyAt && downloads?.hasPreview))
   const previewImage = downloads?.previewImageUrl || ''
-  const downloadUrl = downloads?.zipUrl || ''
+  // Drive (admin drops the ZIP in the client's folder) takes precedence
+  const downloadUrl = portal?.driveZip?.url || downloads?.zipUrl || ''
   const canDownload = paid && Boolean(downloadUrl)
   const canApprove = previewReady && !approved
   const canOpenChat = chatEligible && previewReady
@@ -671,7 +673,7 @@ export default function MonSitePage() {
 
                   {order?.hosting ? (
                     <p className="text-xs text-amber-200/80">
-                      Option hébergement en ligne incluse : votre lien permanent vous sera transmis après le paiement.
+                      Option hébergement en ligne (1 an, renouvelable) incluse : votre lien vous sera transmis après le paiement.
                     </p>
                   ) : null}
                 </div>

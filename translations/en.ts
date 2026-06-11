@@ -73,9 +73,9 @@ export const en = {
     ],
     hosting: {
       label: 'Option',
-      title: 'Online hosting',
+      title: 'Online hosting · 1 year',
       price: '+€5',
-      description: 'We put your E-CV online for you: a permanent link, ready to share, nothing technical to manage.',
+      description: 'We put your E-CV online for 1 year: a link ready to share, nothing technical to manage. Renewable for €5/year.',
     },
     cta: 'Start — no payment',
     reassurance: '€0 at order · First version within 24 h · Dedicated support',
@@ -208,7 +208,7 @@ export const en = {
       },
       {
         question: 'What is the €5 hosting option?',
-        answer: 'For €5 more, we put your E-CV online for you: you get a permanent link, ready to share on LinkedIn, by email or on your paper CV — with no technical work on your side.',
+        answer: 'For €5 more, we put your E-CV online for you for 1 year: you get a link ready to share on LinkedIn, by email or on your paper CV — with no technical work on your side. Hosting is then renewable for €5/year.',
       },
       {
         question: 'What happens to my data and files?',
@@ -426,9 +426,9 @@ export const en = {
       secure: 'No payment required today',
     },
     hosting: {
-      title: 'Online hosting',
+      title: 'Online hosting · 1 year',
       price: '+€5',
-      description: 'Your E-CV put online by us, with a permanent link to share. Paid later, together with your E-CV.',
+      description: 'Your E-CV put online by us for 1 year, with a link to share (renewable €5/year). Paid later, together with your E-CV.',
       add: 'Add option',
       added: 'Option added ✓',
       remove: 'Remove',
